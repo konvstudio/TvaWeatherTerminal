@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Бюро временных прогнозов</title>
+<meta name="theme-color" content="#d9631e">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#e8d9b5;--paper:#f3e8c9;--ink:#3b2a1a;--accent:#d9631e;--mustard:#c9962b;--screen:#1b1409;--glow:#ffb347;--line:#3b2a1a;--face:#fff1cf;
+box-sizing:border-box;padding-top:calc(env(safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#2a2013;--paper:#3a2c1a;--ink:#f0e0bd;--accent:#ee7a32;--mustard:#d9a93a;--screen:#0e0a04;--line:#f0e0bd}}
+:root[data-theme="dark"]{--bg:#2a2013;--paper:#3a2c1a;--ink:#f0e0bd;--accent:#ee7a32;--mustard:#d9a93a;--screen:#0e0a04;--line:#f0e0bd}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Courier New",ui-monospace,Menlo,monospace;padding:14px;min-height:100%}
+.wrap{max-width:460px;margin:0 auto}
+.head{border:3px solid var(--line);background:var(--paper);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.head h1{font-size:15px;margin:0;letter-spacing:1px;text-transform:uppercase;line-height:1.2}
+.head small{display:block;font-size:10px;opacity:.75;letter-spacing:1px}
+.badge{background:var(--accent);color:#fff;font-weight:bold;padding:6px 8px;font-size:12px;border:2px solid var(--line);white-space:nowrap}
+.search{display:flex;gap:6px;margin:12px 0 8px}
+.search input{flex:1;min-width:0;font:inherit;font-size:14px;padding:10px;background:var(--paper);color:var(--ink);border:2px solid var(--line);text-transform:uppercase}
+.search button,.tabs button{font:inherit;font-size:12px;text-transform:uppercase;padding:9px 10px;background:var(--mustard);color:#1b1409;border:2px solid var(--line);box-shadow:3px 3px 0 var(--line);cursor:pointer}
+.search button:active,.tabs button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--line)}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.tabs button{flex:1;min-width:64px;background:var(--paper);color:var(--ink)}
+.tabs button.on{background:var(--mustard);color:#1b1409}
+.msg{font-size:11px;min-height:16px;margin:-2px 0 8px;color:var(--accent);letter-spacing:1px;text-transform:uppercase}
+.mascot{display:flex;align-items:center;gap:8px;margin-bottom:12px;min-height:150px;overflow:visible}
+.mascot svg{width:120px;flex:none;animation:bob 2.4s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-6px) rotate(2deg)}}
+.eyes{animation:blink 4.5s infinite;transform-origin:60px 52px}
+@keyframes blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.08)}}
+.bell{animation:ring 2.4s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes ring{0%,100%{transform:rotate(0)}25%{transform:rotate(-10deg)}75%{transform:rotate(10deg)}}
+.bubble{flex:1;background:var(--paper);border:3px solid var(--line);padding:10px 12px;font-size:13px;line-height:1.35;position:relative;min-height:64px;animation:pop .4s}
+.bubble::before{content:"";position:absolute;left:-12px;top:22px;border:8px solid transparent;border-right-color:var(--line)}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.crt{background:var(--screen);border:6px solid var(--line);border-radius:18px;padding:16px;color:#ffb347;position:relative;overflow:hidden;text-shadow:0 0 6px #ffb347;box-shadow:inset 0 0 40px rgba(0,0,0,.8)}
+.crt.boot{animation:boot .7s}
+@keyframes boot{0%{transform:scaleY(.02);filter:brightness(3)}60%{transform:scaleY(1.04);filter:brightness(1.8)}100%{transform:scaleY(1);filter:none}}
+.crt::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.28) 0 2px,transparent 2px 4px);pointer-events:none;animation:flick 3s infinite}
+.crt::before{content:"";position:absolute;left:0;right:0;height:30px;top:-30px;background:linear-gradient(transparent,rgba(255,179,71,.18),transparent);animation:scan 5s linear infinite;pointer-events:none}
+@keyframes flick{0%,100%{opacity:.9}50%{opacity:1}}
+@keyframes scan{to{top:110%}}
+.row{display:flex;justify-content:space-between;font-size:11px;letter-spacing:1px;opacity:.85;gap:8px}
+.temp{font-size:64px;font-weight:bold;line-height:1;margin:10px 0 2px}
+.cond{font-size:14px;text-transform:uppercase;letter-spacing:2px;min-height:20px}
+.cond::after{content:"▌";animation:cur 1s steps(2) infinite}
+@keyframes cur{50%{opacity:0}}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.card{border:2px solid var(--line);background:var(--paper);padding:10px}
+.card h3{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:1px}
+.val{font-size:22px;font-weight:bold}
+.bar{height:12px;border:2px solid var(--line);margin-top:6px;background:repeating-linear-gradient(90deg,transparent 0 6px,rgba(0,0,0,.12) 6px 7px)}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width 1s cubic-bezier(.2,.9,.3,1.2)}
+.threat{grid-column:1/-1;display:flex;align-items:center;gap:12px}
+.lamps{display:flex;gap:6px}
+.lamp{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);background:#5a4a35;transition:.3s}
+.lamp.on{background:var(--accent);box-shadow:0 0 10px var(--accent);animation:pulse 1.4s infinite}
+.lamp.on.hi{background:#e03a2a;box-shadow:0 0 12px #e03a2a}
+@keyframes pulse{50%{opacity:.6}}
+.stamp{margin-left:auto;border:3px solid var(--accent);color:var(--accent);padding:4px 8px;font-weight:bold;font-size:12px;text-transform:uppercase;text-align:center;transform:rotate(-6deg)}
+.stamp.slam{animation:slam .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes slam{0%{transform:rotate(-6deg) scale(3);opacity:0}100%{transform:rotate(-6deg) scale(1);opacity:1}}
+.gauge{width:100%;max-width:200px;display:block;margin:auto}
+.foot{margin-top:12px;font-size:10px;text-align:center;opacity:.7;letter-spacing:1px}
+.hbtn{display:flex;gap:6px;align-items:center}
+.snd{font:inherit;font-size:16px;background:var(--paper);color:var(--ink);border:2px solid var(--line);padding:3px 7px;cursor:pointer}
+.fcard{margin-top:10px}
+.fcs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.fc{border:2px solid var(--line);background:var(--bg);padding:6px 2px;text-align:center;font-size:11px;animation:pop .4s backwards}
+.fc b{display:block;text-transform:uppercase;color:var(--accent)}
+.fc em{display:block;font-style:normal;font-size:15px;font-weight:bold;margin:3px 0 0}
+.fc small{display:block;opacity:.75}
+.fc .rb{height:6px;border:1px solid var(--line);margin:5px 4px 2px;background:transparent}
+.fc .rb i{display:block;height:100%;background:var(--accent)}
+body{transition:background 2s,color 2s}
+body[data-tod="night"]{--bg:#1b140b;--paper:#2a2012;--ink:#f0e0bd;--line:#f0e0bd;--screen:#070502;--face:#e9d6a8;--accent:#ee7a32;--mustard:#d9a93a}
+.alarmbar{background:#e03a2a;color:#fff;font-weight:bold;font-size:12px;letter-spacing:1px;text-align:center;padding:8px;border:3px solid var(--line);margin-top:10px;animation:alm 1s steps(2) infinite}
+.alarmbar[hidden]{display:none}
+@keyframes alm{50%{background:#7a1a12}}
+body.alarm .crt{border-color:#e03a2a}
+.ribcard{margin-top:10px}.rib{width:100%;display:block}
+.draw{stroke-dasharray:1;stroke-dashoffset:1;animation:dr 2s ease-out forwards}
+@keyframes dr{to{stroke-dashoffset:0}}
+.mcl{font-size:16px;font-weight:bold;text-transform:uppercase;color:var(--accent)}
+.mcb{display:flex;align-items:flex-end;gap:1px;height:38px;margin-top:8px;border-bottom:2px solid var(--line)}
+.mcb i{flex:1;background:var(--accent);min-height:2px}
+.crt,.card{position:relative;overflow:hidden}
+.clk{position:relative;flex:none}
+#lamp{animation:pulse 1s infinite}
+.fxc{position:absolute;pointer-events:none;z-index:6;animation:fxo .6s forwards}
+.crt .fxc{mix-blend-mode:screen}
+@keyframes fxo{0%{opacity:1;transform:scale(.6)}100%{opacity:0;transform:scale(1.4)}}
+.fxb{position:absolute;left:0;right:0;background:rgba(255,179,71,.6);pointer-events:none;z-index:6;animation:fxb .3s steps(3) forwards}
+@keyframes fxb{50%{transform:translateX(24px)}100%{opacity:0}}
+.tear{animation:tear .35s steps(6)}
+@keyframes tear{0%{transform:none}20%{transform:translateX(-4px) skewX(3deg)}40%{transform:translateX(5px) skewX(-4deg);filter:hue-rotate(60deg)}60%{transform:translateX(-3px)}100%{transform:none;filter:none}}
+.gate{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:calc(18px + env(safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px)) 18px calc(18px + env(safe-area-inset-bottom,0px));touch-action:manipulation}
+.gate.open{animation:gopen .7s forwards}
+@keyframes gopen{to{opacity:0;transform:scale(1.06)}}
+#gscr{width:min(100%,420px);min-height:210px;font-size:13px;line-height:1.7;color:#ffb347}
+#gscr.off{background:#0b0805;color:#6b4a22;text-shadow:none}
+#gscr div{white-space:pre-wrap;word-break:break-word}
+.pwr{width:92px;height:92px;border-radius:50%;background:var(--accent);color:#fff;border:4px solid var(--line);box-shadow:4px 4px 0 var(--line);font:inherit;font-size:34px;line-height:1;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;animation:pwrp 1.6s infinite}
+.pwr span{font-size:10px;letter-spacing:1px;margin-top:2px}
+.pwr:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--line)}
+@keyframes pwrp{50%{box-shadow:4px 4px 0 var(--line),0 0 22px var(--accent)}}
+.gform{display:flex;flex-direction:column;gap:8px;width:min(100%,420px)}
+.gform[hidden]{display:none}
+.gform label{font-size:12px;letter-spacing:1px}
+.gform input{font:inherit;font-size:16px;padding:12px;background:var(--paper);color:var(--ink);border:3px solid var(--line);text-transform:uppercase}
+.gform button{font:inherit;font-size:14px;padding:12px;background:var(--mustard);color:#1b1409;border:3px solid var(--line);box-shadow:3px 3px 0 var(--line);cursor:pointer}
+body.locked{overflow:hidden}
+.vsw button.on{background:var(--mustard);color:#1b1409}
+#lsvg svg{width:100%;display:block}
+.dbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.dbtns button{font:inherit;font-size:11px;padding:7px 8px;background:var(--mustard);color:#1b1409;border:2px solid var(--line);box-shadow:2px 2px 0 var(--line);cursor:pointer}
+.dline{font-size:12px;line-height:1.6}
+.nd{cursor:pointer}
+@media(prefers-reduced-motion:reduce){.mascot .minute-svg,.mm-arm-left,.mm-arm-right,.mm-leg-left,.mm-leg-right,.mm-body,.mm-eyes{animation:none!important}}\n[hidden]{display:none!important}
+.eq{display:flex;gap:2px;height:28px;align-items:flex-end;margin-top:10px}
+.eq i{flex:1;height:12%;background:var(--glow);opacity:.85}
+.eq.on i{animation:eqb .5s ease-in-out infinite alternate}
+@keyframes eqb{to{height:100%}}
+.rctl{display:flex;gap:6px;margin-top:10px}
+.rctl button{flex:1;font:inherit;font-size:18px;padding:10px 0;background:var(--mustard);color:#1b1409;border:2px solid var(--line);box-shadow:3px 3px 0 var(--line);cursor:pointer}
+.rctl button.big{flex:2;background:var(--accent);color:#fff}
+.rctl button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--line)}
+#vradio input[type=range]{width:100%;accent-color:var(--accent);margin:6px 0 0;height:28px}
+.rlist{position:relative;max-height:300px;overflow:auto;border:2px solid var(--line);background:var(--paper)}
+.rs{display:flex;border-bottom:1px solid var(--line)}
+.rs button{font:inherit;font-size:12px;text-align:left;background:transparent;color:var(--ink);border:0;padding:11px 8px;cursor:pointer;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs button.f{flex:0 0 44px;text-align:center;font-size:16px}
+.rs.on{background:var(--mustard)}.rs.on button{color:#1b1409}
+.rs small{opacity:.7;margin-left:6px}
+.rslot{position:absolute;right:8px;top:34px;width:84px;height:92px}
+.rslot svg{width:84px;display:block;animation:bob 2.4s ease-in-out infinite;transform-origin:50% 100%}
+.rslot.play svg{animation:dance .55s ease-in-out infinite alternate}
+@keyframes dance{from{transform:translateY(0) rotate(-7deg)}to{transform:translateY(-8px) rotate(7deg)}}
+.clk.scr{filter:sepia(1) saturate(2.6) hue-rotate(-14deg) brightness(.9) contrast(1.25) drop-shadow(0 0 5px #ffb347)}
+.rslot .clk{animation:flick 1.6s infinite}
+.clkgone{width:120px;height:120px;flex:none;border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:10px;letter-spacing:1px;opacity:.6;text-align:center}
+#vviz input[type=range]{width:100%;accent-color:var(--accent);margin:6px 0 0;height:28px}
+#vviz .crt{padding:0;overflow:hidden}
+.vzl{font-size:11px;letter-spacing:1px;margin-top:8px}
+</style>
+</head>
+<body class="locked">
+<div class="gate" id="gate">
+  <div class="crt off" id="gscr"><div>УСТРОЙСТВО ОБЕСТОЧЕНО.</div><div>НАЖМИТЕ КНОПКУ ПИТАНИЯ.</div></div>
+  <button class="pwr" id="pwr" type="button">⏻<span>ВКЛЮЧИТЬ</span></button>
+  <form class="gform" id="gform" hidden onsubmit="return false"><label for="gname">ВВЕДИТЕ ИМЯ СОТРУДНИКА:</label><input id="gname" maxlength="24" autocomplete="off" autocapitalize="characters"><button id="gok" type="button">ВХОД ▶</button></form>
+</div>
+<div class="wrap">
+  <div class="head">
+    <div><h1>Бюро временных прогнозов</h1><small>ФОРМА 77-B · ОТДЕЛ АТМОСФЕРНЫХ АНОМАЛИЙ</small><small id="agent"></small></div>
+    <div class="hbtn"><div class="badge" id="case">№ 0000</div><button class="snd" id="snd" type="button" title="Звук">🔊</button><button class="snd" id="mus" type="button" title="Музыка">🎵</button></div>
+  </div>
+
+  <div class="alarmbar" id="alarm" hidden></div>
+  <div class="tabs vsw" style="margin:12px 0 0"><button id="vb1" type="button" class="on">Погода</button><button id="vb2" type="button">Линии</button><button id="vb3" type="button">Радио</button><button id="vb4" type="button">Визуал</button><button id="favb" type="button" style="flex:0 0 52px;min-width:52px" title="В избранное">☆</button></div>
+  <div id="vweather"><form class="search" id="f" onsubmit="return false">
+    <input id="q" placeholder="ВВЕДИТЕ СЕКТОР (ГОРОД)" autocomplete="off">
+    <button id="go" type="button">Запрос</button>
+  </form>
+  <div class="msg" id="msg"></div>
+  <div class="tabs" id="tabs"></div>
+
+  <div class="mascot">
+    <div class="clk"><svg class="minute-svg" viewBox="0 0 150 180" role="img" aria-label="Минутка — анимированные часы-талисман">
+<g class="mm-arm mm-arm-left"><path d="M31 77 Q16 68 13 49" fill="none" stroke="#5a2117" stroke-width="9" stroke-linecap="round"/><path d="M31 77 Q16 68 13 49" fill="none" stroke="#ff8b19" stroke-width="5" stroke-linecap="round"/><path d="M13 50 Q4 45 7 34 L4 20 Q3 13 8 12 Q13 12 15 20 L18 30 Q23 25 28 29 Q34 32 30 38 L24 49 Q20 55 13 50Z" fill="#ffad37" stroke="#5a2117" stroke-width="3" stroke-linejoin="round"/><path d="M8 37 Q15 32 20 38 M13 43 Q20 39 24 43" fill="none" stroke="#5a2117" stroke-width="2" stroke-linecap="round"/><path d="M8 58 L24 64 M10 64 L26 70" stroke="#8e3a16" stroke-width="3"/></g>
+<g class="mm-arm mm-arm-right"><path d="M102 79 Q123 85 127 101" fill="none" stroke="#5a2117" stroke-width="9" stroke-linecap="round"/><path d="M102 79 Q123 85 127 101" fill="none" stroke="#ff8b19" stroke-width="5" stroke-linecap="round"/><path d="M119 102 Q124 91 132 95 L140 103 Q144 108 139 112 L128 119 Q120 120 117 113Z" fill="#ffad37" stroke="#5a2117" stroke-width="3" stroke-linejoin="round"/></g>
+<g class="mm-legs"><g class="mm-leg mm-leg-left"><path d="M49 120 L45 148" stroke="#5a2117" stroke-width="7" stroke-linecap="round"/><path d="M49 120 L45 148" stroke="#ff9a25" stroke-width="3" stroke-linecap="round"/><path d="M45 146 Q34 145 30 153 L26 160 Q25 165 32 166 L52 166 Q59 164 55 157 L51 150Z" fill="#ff941c" stroke="#5a2117" stroke-width="3" stroke-linejoin="round"/></g><g class="mm-leg mm-leg-right"><path d="M77 120 L82 148" stroke="#5a2117" stroke-width="7" stroke-linecap="round"/><path d="M77 120 L82 148" stroke="#ff9a25" stroke-width="3" stroke-linecap="round"/><path d="M80 147 Q73 151 74 158 L78 165 L101 165 Q108 163 103 156 L94 149Z" fill="#ff941c" stroke="#5a2117" stroke-width="3" stroke-linejoin="round"/></g></g>
+<g class="mm-body"><circle cx="62" cy="70" r="53" fill="#ff8b1d" stroke="#5a2117" stroke-width="4"/><path d="M25 39 Q43 16 72 19 Q100 22 111 48 Q88 34 65 39 Q44 42 25 39Z" fill="#ffb23e" opacity=".72"/><circle cx="62" cy="70" r="43" fill="#ffa52e" stroke="#d65b19" stroke-width="2"/><g id="ticks" stroke="#5a2117" stroke-width="2.5" stroke-linecap="round"></g>
+<g class="mm-eyes"><ellipse cx="47" cy="61" rx="10" ry="14" fill="#fff3d8" stroke="#5a2117" stroke-width="2.5"/><ellipse cx="78" cy="61" rx="10" ry="14" fill="#fff3d8" stroke="#5a2117" stroke-width="2.5"/><ellipse cx="49" cy="63" rx="5.5" ry="9" fill="#5a2117"/><ellipse cx="80" cy="63" rx="5.5" ry="9" fill="#5a2117"/><circle id="p1" cx="49" cy="61" r="2" fill="#fff"/><circle id="p2" cx="80" cy="61" r="2" fill="#fff"/><path d="M36 46 Q39 39 44 45 M45 43 L47 38 M73 43 L76 38 M82 44 Q87 39 90 46" fill="none" stroke="#5a2117" stroke-width="2.5" stroke-linecap="round"/></g>
+<circle cx="62" cy="76" r="2.8" fill="#5a2117"/><path id="mouth" d="M45 87 Q62 101 80 86" fill="none" stroke="#5a2117" stroke-width="3.5" stroke-linecap="round"/>
+<g class="mm-hands" opacity=".85"><line id="hh" x1="62" y1="76" x2="62" y2="59" stroke="#5a2117" stroke-width="3" stroke-linecap="round" style="transform-origin:62px 76px"/><line id="mh" x1="62" y1="76" x2="78" y2="83" stroke="#5a2117" stroke-width="2.5" stroke-linecap="round" style="transform-origin:62px 76px"/><line id="sh" x1="62" y1="76" x2="50" y2="91" stroke="#d83c2c" stroke-width="1.5" style="transform-origin:62px 76px"/></g><circle cx="62" cy="76" r="3.5" fill="#5a2117"/></g></svg></div>
+    <div class="bubble" id="bubble">Здравствуйте! Время — драгоценный ресурс.</div>
+  </div>
+
+  <div class="crt" id="crt">
+    <div class="row"><span id="loc">—</span><span id="clock">--:--:--</span></div>
+    <div class="temp" id="temp">--°</div>
+    <div class="cond" id="cond"></div>
+    <div class="row" style="margin-top:10px"><span id="tl">ВРЕМЕННАЯ ЛИНИЯ: —</span><span>▮▮▮▯</span></div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h3>Термометр</h3>
+      <svg class="gauge" viewBox="0 0 200 115">
+        <path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="currentColor" stroke-width="10" opacity=".25"/>
+        <path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#d9631e" stroke-width="10" stroke-dasharray="2 8"/>
+        <line id="needle" x1="100" y1="100" x2="100" y2="38" stroke="currentColor" stroke-width="4" stroke-linecap="round" style="transform-origin:100px 100px;transition:transform 1.2s cubic-bezier(.3,1.6,.5,1)"/>
+        <circle cx="100" cy="100" r="7" fill="currentColor"/>
+        <text x="14" y="113" font-size="11" fill="currentColor">−40</text>
+        <text x="162" y="113" font-size="11" fill="currentColor">+50</text>
+      </svg>
+    </div>
+    <div class="card"><h3>Ветер</h3><div class="val" id="wind">—</div><div class="bar"><i id="windbar"></i></div></div>
+    <div class="card"><h3>Осадки сейчас</h3><div class="val" id="rain">—</div><div class="bar"><i id="rainbar"></i></div></div>
+    <div class="card"><h3>Влажность</h3><div class="val" id="hum">—</div><div class="bar"><i id="humbar"></i></div></div>
+    <div class="card threat"><div><h3>Уровень угрозы</h3><div class="lamps" id="lamps"></div></div><div class="stamp" id="stamp">ОДОБРЕНО</div></div>
+  </div>
+  <div class="card fcard"><h3>Прогноз временной линии · 5 суток</h3><div class="fcs" id="fcs"><div class="fc">…</div></div></div>
+  <div class="card ribcard"><h3>Лента самописца · 12 часов</h3><div id="rib">…</div></div>
+  <div class="card ribcard" id="mccard"><h3>Отсчёт до аномалии · 60 минут</h3><div class="mcl" id="mcl">…</div><div class="mcb" id="mcb"></div><small id="mcs" style="display:block;margin-top:6px;opacity:.75"></small></div>
+  </div>
+  <div id="vlines" hidden>
+    <div class="card" style="margin-top:12px"><h3>Главный терминал временных линий</h3><div id="lsvg"></div>
+    <small style="opacity:.75;display:block;margin-top:6px">✦ священная линия · ☂ осадки · ▼ похолодание · ⚠ тревога · ✂ подлежит обрезке. Нажмите узел.</small></div>
+    <div class="card" style="margin-top:10px"><h3>Досье события</h3><div class="dline" id="dost">Выберите узел на линии.</div><div class="dbtns" id="dbt"></div></div>
+  </div>
+  <div id="vradio" class="nofx" hidden>
+    <div class="crt" style="margin-top:12px">
+      <div class="row"><span>ПРИЁМНИК БЮРО · 77-R</span><span id="rstat">ГОТОВ</span></div>
+      <div class="temp" id="rfreq" style="font-size:38px">--.-</div>
+      <div class="cond" id="rname" style="font-size:13px;min-height:36px;letter-spacing:1px;padding-right:96px">Выберите частоту</div>
+      <div class="eq" id="req"></div><div class="rslot" id="rslot"></div>
+    </div>
+    <div class="card" style="margin-top:10px">
+      <input type="range" id="rdial" min="0" max="0" value="0" aria-label="Настройка частоты">
+      <div class="rctl"><button id="rprev" type="button">⏮</button><button id="rplay" type="button" class="big">▶</button><button id="rnext" type="button">⏭</button><button id="rfav" type="button">☆</button></div>
+      <div style="font-size:11px;margin-top:10px;letter-spacing:1px">ГРОМКОСТЬ</div><input type="range" id="rvol" min="0" max="100" value="70">
+    </div>
+    <div class="tabs" id="rmodes" style="margin-top:10px"><button data-m="sec" type="button" class="on">Сектор</button><button data-m="top" type="button">Топ</button><button data-m="fav" type="button">★ Мои</button><button data-m="tva" type="button">Резерв</button></div>
+    <div class="tabs" id="rchipbox"></div>
+    <div class="search" style="margin:0 0 8px"><input id="rq" placeholder="ПОИСК ЧАСТОТЫ" autocomplete="off"><button id="rgo" type="button">Найти</button><button id="radd" type="button" title="Своя станция">＋</button></div>
+    <div class="search" id="rpan" hidden style="flex-direction:column;margin:0 0 8px"><input id="rpn" placeholder="НАЗВАНИЕ"><input id="rpu" placeholder="https://ссылка-на-поток" style="text-transform:none"><button id="rps" type="button">Сохранить в «Мои»</button></div>
+    <div class="msg" id="rmsg"></div>
+    <div class="rlist" id="rlist"></div>
+  </div>
+  <div id="vviz" class="nofx" hidden>
+    <div class="crt" style="margin-top:12px"><canvas id="vzc" style="display:block;width:100%;height:240px"></canvas></div>
+    <div class="search" style="margin:10px 0 8px"><input id="vzt" placeholder="ВВЕДИТЕ ТЕКСТ…" maxlength="120" autocomplete="off" style="font-size:16px"><button id="vzg" type="button">▶ Пуск</button></div>
+    <div class="tabs" id="vzm"><button data-m="0" type="button" class="on">Фосфор</button><button data-m="1" type="button">ASCII</button><button data-m="2" type="button">Сигнал</button><button data-m="3" type="button">Поток</button><button data-m="4" type="button">Сцена</button></div>
+    <div class="tabs"><button id="vzp" type="button">⏸ Пауза</button><button id="vzx" type="button">✕ Очистить</button><button id="vzk" type="button">Цвет: зелёный</button></div>
+    <div class="card"><div class="vzl">СКОРОСТЬ</div><input type="range" id="vzs" min="10" max="100" value="50"><div class="vzl">ИНТЕНСИВНОСТЬ</div><input type="range" id="vzi" min="0" max="100" value="60"></div>
+    <div class="msg" id="vzmsg"></div>
+  </div>
+  <div class="foot" id="foot">ВРЕМЯ — ЭТО ПРИВИЛЕГИЯ, А НЕ ПРАВО · ДАННЫЕ: OPEN-METEO.COM</div>
+</div>
+<script>
+var AC=null,snd=true;try{snd=localStorage.getItem("tva_snd")!=="0"}catch(e){}
+function tone(f,d,ty,v,w,f2,m){if(!(m?mus&&snd:snd)||!AC||AC.state!=="running")return;var t=AC.currentTime+(w||0),o=AC.createOscillator(),g=AC.createGain();o.type=ty||"square";o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);g.gain.setValueAtTime(v||.05,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d+.02)}
+function noise(d,v,w,fr){if(!snd||!AC||AC.state!=="running")return;var n=Math.floor(AC.sampleRate*d),b=AC.createBuffer(1,n,AC.sampleRate),a=b.getChannelData(0);for(var i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);var s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain(),t=AC.currentTime+(w||0);s.buffer=b;f.type="bandpass";f.frequency.value=fr||1500;g.gain.value=v||.1;s.connect(f);f.connect(g);g.connect(AC.destination);s.start(t)}
+var S={click:function(){noise(.05,.25,0,1800);tone(140,.07,"square",.04)},key:function(){tone(1100+Math.random()*300,.025,"square",.012)},boot:function(){tone(55,.8,"sawtooth",.05,0,420);noise(.5,.15,0,3200)},stamp:function(){tone(95,.28,"sine",.25,0,38);noise(.14,.4,0,450)},lamp:function(i){tone(380+i*110,.09,"square",.03)},ding:function(){tone(1320,.5,"sine",.07);tone(1760,.6,"sine",.05,.09)},power:function(){tone(40,1.2,"sawtooth",.08,0,300);noise(.8,.3,0,200);tone(900,.6,"sine",.02,.5,2400)},beep:function(){tone(1000,.1,"square",.04);tone(1500,.12,"square",.04,.12)},access:function(){[660,880,1320].forEach(function(f,i){tone(f,.18,"square",.04,i*.14)})},static:function(){noise(.3,.16,0,3800);noise(.15,.12,.05,900);tone(300+Math.random()*900,.06,"square",.012);tone(300+Math.random()*900,.05,"square",.012,.08)},siren:function(){tone(520,.35,"sawtooth",.05,0,900);tone(520,.35,"sawtooth",.05,.4,900);tone(520,.35,"sawtooth",.05,.8,900)},err:function(){tone(190,.25,"sawtooth",.06,0,90);tone(160,.3,"sawtooth",.06,.28,70)},whirr:function(){tone(180,1,"triangle",.035,0,760)},tune:function(){noise(.3,.1,0,2400);tone(500+Math.random()*1200,.12,"sine",.02,0,1800)}};
+function initAudio(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==="suspended")AC.resume()}
+document.addEventListener("pointerdown",initAudio);document.addEventListener("keydown",initAudio);
+var greet="",alarmOn=false,mus=false,mT=null,mstep=0;
+var SRV="AccuWeather\u00ae",mcp=null,unsub=null,shownKey=null,typeT,cntT,phrases=[],pi=0,loaded=false;
+var FB={"москва":{n:"Москва",t:4,c:"Облачно, мелкий дождь",w:18,r:2.1,h:82},"сочи":{n:"Сочи",t:19,c:"Ясно, тёплый бриз",w:9,r:0,h:55},"якутск":{n:"Якутск",t:-31,c:"Морозная дымка",w:6,r:0.2,h:70},"дубай":{n:"Дубай",t:41,c:"Пыльная буря",w:46,r:0,h:25},"нью-йорк":{n:"Нью-Йорк",t:13,c:"Переменная облачность",w:14,r:0,h:65}};
+var $=function(i){return document.getElementById(i)};
+var tabs=$("tabs"),lamps=$("lamps"),tk=$("ticks");
+for(var i=0;i<5;i++){var l=document.createElement("div");l.className="lamp";lamps.appendChild(l)}
+for(var k=0;k<12;k++){var a=k*30*Math.PI/180,r1=k%3?35:32;tk.innerHTML+='<line x1="'+(62+Math.sin(a)*r1)+'" y1="'+(76-Math.cos(a)*r1)+'" x2="'+(62+Math.sin(a)*40)+'" y2="'+(76-Math.cos(a)*40)+'"/>'}
+function P(r){var p=r&&r.payload;if(typeof p==="string"){try{p=JSON.parse(p)}catch(e){}}return p}
+function num(s,d){var m=String(s==null?"":s).match(/-?\d+(?:[.,]\d+)?/);return m?parseFloat(m[0].replace(",",".")):d}
+function say(t){var b=$("bubble");b.style.animation="none";b.offsetHeight;b.style.animation="";b.textContent=t}
+function mouth(sad){$("mouth").setAttribute("d",sad?"M45 91 Q62 78 80 91":"M45 87 Q62 101 80 86")}
+function type(el,txt){clearInterval(typeT);el.textContent="";var i=0;typeT=setInterval(function(){el.textContent=txt.slice(0,++i);S.key();if(i>=txt.length)clearInterval(typeT)},35)}
+function count(el,to){clearInterval(cntT);var i=0;cntT=setInterval(function(){i++;var v=Math.round(to*i/24);el.textContent=(v>0?"+":"")+v+"\u00b0";if(i>=24)clearInterval(cntT)},30)}
+function fill(el,pct){el.style.width=Math.max(0,Math.min(100,pct))+"%"}
+
+function show(d,anim,key){lastD=d;
+ mouth(false);$("msg").textContent="";
+ $("loc").textContent="СЕКТОР: "+d.n.toUpperCase();
+ $("case").textContent="№ "+(1000+Math.abs(d.n.length*731+d.t*17)%9000);
+ $("wind").textContent=d.w+" км/ч";fill($("windbar"),d.w*2);
+ $("rain").textContent=d.r+" мм";fill($("rainbar"),d.r*20);
+ $("hum").textContent=d.h+"%";fill($("humbar"),d.h);
+ var ang=Math.max(-80,Math.min(80,(d.t+40)/90*160-80));
+ var th=Math.min(5,Math.max(1,Math.round(d.w/12+Math.abs(d.t-15)/18+d.r*2)));
+ if(d.alerts)th=5;
+ var al=d.alerts>0||th>=5,ab=$("alarm");if(anim)alarmOn=false;
+ ab.hidden=!al;ab.textContent=d.alerts>0?"⚠ ТРЕВОГА TVA · ОФИЦИАЛЬНОЕ ПРЕДУПРЕЖДЕНИЕ В СЕКТОРЕ":"⚠ ТРЕВОГА TVA · АНОМАЛИЯ ВЫСОКОГО УРОВНЯ";
+ document.body.classList.toggle("alarm",al);if(al&&!alarmOn)S.siren();alarmOn=al;
+ if(anim){
+  var c=$("crt");c.classList.remove("boot");c.offsetHeight;c.classList.add("boot");S.boot();S.ding();
+  count($("temp"),d.t);type($("cond"),d.c);
+  $("needle").style.transform="rotate(-80deg)";S.whirr();setTimeout(function(){$("needle").style.transform="rotate("+ang+"deg)"},60);
+ }else{$("temp").textContent=(d.t>0?"+":"")+d.t+"\u00b0";$("cond").textContent=d.c;$("needle").style.transform="rotate("+ang+"deg)"}
+ Array.prototype.forEach.call(lamps.children,function(l,i){var f=function(){if(anim&&i<th)S.lamp(i);l.className="lamp"+(i<th?" on":"")+(i<th&&th>=4?" hi":"")};anim?(l.className="lamp",setTimeout(f,150*i)):f()});
+ var s=$("stamp"),txt=th>=4?"ОПАСНО":th>=3?"ВНИМАНИЕ":"ОДОБРЕНО",col=th>=4?"#e03a2a":"";
+ var apply=function(){s.textContent=txt;s.style.color=s.style.borderColor=col;if(anim){s.classList.add("slam");S.stamp()}};
+ if(anim){s.classList.remove("slam");s.offsetHeight;setTimeout(apply,700)}else apply();
+ $("tl").textContent="ВРЕМЕННАЯ ЛИНИЯ: "+(th>=4?"НЕСТАБИЛЬНА":"СВЯЩЕННАЯ")+(d.loc?" · "+d.loc:"");
+ phrases=["Сектор «"+d.n+"»: "+(d.t>0?"+":"")+d.t+"\u00b0. Не создавайте ветвлений!",th>=4?"Обнаружена аномалия! Рекомендую благоразумие.":"Погода одобрена. Продуктивного дня!","Время — драгоценный ресурс. Не тратьте его зря.",d.r>0.5?"Осадки: "+d.r+" мм. Бюро рекомендует зонт.":"Осадков нет. Бюро довольно."];
+ if(greet){phrases.unshift(greet);greet=""}
+ if(anim){pi=0;say(phrases[0])}
+ loaded=true;
+}
+
+function onData(ev,key){
+ if(ev.type==="error")return fail(ev.error,true);
+ var res=ev.result,p=P(res);
+ if(!p||!p.currentConditions)return fail({code:"bad_data"},true);
+ var c=p.currentConditions,x=c.extended||{},info=(p.location&&p.location.info)||{};
+ var d={n:info.name||"—",t:Math.round(c.temperatureValue),c:(c.phrase||"")+(c.realFeel?" · ощущается "+c.realFeel:""),w:num(x.wind,0),r:num(x.precipitation,0),h:x.humidityValue==null?num(x.humidity,0):x.humidityValue,loc:p.location&&p.location.localTime,alerts:(p.alerts||[]).length};
+ document.body.dataset.tod=c.isDayTime===false?"night":"day";
+ curName=info.name||"";
+ var first=shownKey!==key;shownKey=key;
+ show(d,first,key);
+ var ts=res.cache?res.cache.storedAt:Date.now();
+ $("foot").textContent="ДАННЫЕ: OPEN-METEO.COM (CC BY 4.0) · ОБНОВЛЕНО "+new Date(ts).toLocaleTimeString("ru-RU")+" · АВТООБНОВЛЕНИЕ 60 С";
+}
+function fail(e,fromWatch){
+ var code=e&&e.code,m;
+ if(code==="needs_reauth")m="Источник данных недоступен.";
+ else if(code==="server_not_connected")m="Источник данных недоступен.";
+ else if(code==="approval_required"||code==="not_granted"||code==="not_in_manifest")m="Источник данных недоступен.";
+ else if(code==="rate_limited")m="Слишком много запросов. Подождите минуту.";
+ else m="Нет связи с архивом ("+(code||"ошибка")+"). Показаны последние данные.";
+ $("msg").textContent=m;mouth(true);S.err();say("Ой! "+m);
+ if(!loaded)fallback("москва");
+}
+function fallback(q){
+ var key=q.toLowerCase().replace(/ё/g,"е").trim(),d=FB[key];
+ if(!d){$("msg").textContent="Сектор не найден. Без AccuWeather доступны: "+Object.keys(FB).map(function(k){return FB[k].n}).join(", ");mouth(true);return}
+ shownKey="fb:"+key;show(d,true);$("foot").textContent="АРХИВНЫЕ ДЕМО-ДАННЫЕ · НЕТ СВЯЗИ";
+}
+function esc(t){return String(t==null?"":t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function onFc(ev){
+ if(ev.type==="error")return;
+ var p=P(ev.result),a=p&&p.dailyForecast;if(!a||!a.length)return;lastFc=a;
+ var h="";a.slice(0,5).forEach(function(x,i){var d=x.day||{},n=x.night||{},rp=Math.max(d.rainProbabilityValue||0,n.rainProbabilityValue||0);
+  h+='<div class="fc" style="animation-delay:'+i*120+'ms"><b>'+esc(x.shortDayOfWeek)+'</b><span>'+esc(x.displayDate)+'</span><em>'+esc(d.displayTemperature)+'</em><small>'+esc(n.displayTemperature)+'</small><div class="rb"><i style="width:'+rp+'%"></i></div><small>'+rp+'%</small></div>'});
+ $("fcs").innerHTML=h;
+}
+function onHr(ev){
+ if(ev.type==="error")return;
+ var p=P(ev.result),a=p&&p.hourlyForecast;if(!a||a.length<2)return;a=a.slice(0,12);
+ var W=320,pad=20,ts=a.map(function(x){return x.temperatureValue}),mn=Math.min.apply(null,ts),mx=Math.max.apply(null,ts),rg=Math.max(2,mx-mn);
+ var X=function(i){return pad+i*(W-2*pad)/(a.length-1)},Y=function(v){return 24+(1-(v-mn)/rg)*46};
+ var pts=a.map(function(x,i){return X(i).toFixed(1)+","+Y(x.temperatureValue).toFixed(1)}).join(" ");
+ var g='<svg class="rib" viewBox="0 0 320 124" style="color:var(--ink)"><g stroke="currentColor" opacity=".15"><line x1="0" y1="30" x2="320" y2="30"/><line x1="0" y1="60" x2="320" y2="60"/><line x1="0" y1="90" x2="320" y2="90"/></g>';
+ a.forEach(function(x,i){var rp=num(x.extended&&x.extended.rainProbability,0),h=rp*.2;
+  g+='<rect x="'+(X(i)-6)+'" y="'+(98-h)+'" width="12" height="'+h+'" fill="#d9631e" opacity=".55"/>';
+  g+='<text x="'+X(i)+'" y="'+(Y(x.temperatureValue)-8)+'" font-size="10" text-anchor="middle" fill="currentColor">'+Math.round(x.temperatureValue)+'°</text>';
+  g+='<text x="'+X(i)+'" y="114" font-size="9" text-anchor="middle" fill="currentColor" opacity=".7">'+esc(x.dateTime)+'</text>'});
+ g+='<polyline class="draw" pathLength="1" points="'+pts+'" fill="none" stroke="#d9631e" stroke-width="2.5" stroke-linejoin="round"/>';
+ a.forEach(function(x,i){g+='<circle cx="'+X(i)+'" cy="'+Y(x.temperatureValue)+'" r="2.8" fill="currentColor"/>'});
+ $("rib").innerHTML=g+'</svg><small style="opacity:.7">Столбики внизу: вероятность осадков</small>';
+}
+function onMc(ev){
+ var card=$("mccard");
+ if(ev.type==="error"){card.style.display="none";return}
+ var p=P(ev.result),mf=p&&p.minuteCastForecast,m=mf&&mf.minutes;
+ if(!m||!m.length){card.style.display="none";return}
+ card.style.display="";m=m.slice(0,60);
+ var mxd=Math.max.apply(null,[1].concat(m.map(function(x){return x.dbz||0})));
+ $("mcb").innerHTML=m.map(function(x){return '<i style="height:'+(2+(x.dbz||0)/mxd*36)+'px"></i>'}).join("");
+ var f=-1,e=-1,i;for(i=0;i<m.length;i++){if(m[i].dbz>0){f=i;break}}
+ var t;
+ if(f===-1)t="Осадков в ближайший час нет";
+ else if(f===0){for(i=0;i<m.length;i++){if(!(m[i].dbz>0)){e=i;break}}t=e===-1?"Осадки не прекратятся в ближайший час":"Осадки закончатся через "+e+" мин"}
+ else t="Осадки начнутся через "+f+" мин";
+ $("mcl").textContent=t;$("mcs").textContent=mf.summary120||mf.summary60||"";
+}
+function watch(key){curKey=key;favMark();
+ if(unsub){try{unsub()}catch(e){}}
+ $("msg").textContent="ЗАПРОС К АРХИВУ…";
+ var q={queryParams:{locationKey:key,unit:"metric",lang:"ru"}};
+ var u1=mcp.watchTool(SRV,"widgets-current-claude",q,function(ev){onData(ev,key)},{refetchInterval:60000});
+ var u2=mcp.watchTool(SRV,"widgets-daily-claude",q,onFc,{refetchInterval:600000});
+ var u3=mcp.watchTool(SRV,"widgets-hourly-claude",q,onHr,{refetchInterval:600000});
+ var u4=mcp.watchTool(SRV,"widgets-minutecast-claude",q,onMc,{refetchInterval:120000});
+ unsub=function(){u1();u2();u3();u4()};
+}
+function fillTabs(){
+ tabs.innerHTML="";
+ favs.forEach(function(f){
+  var b=document.createElement("button"),city=f.n.split(",")[0];b.type="button";b.textContent=city;b.title=f.n;b.dataset.k=f.key||"";
+  b.onclick=function(){
+   try{localStorage.setItem("tva_city",city)}catch(e){}
+   $("q").value=city;
+   if(f.key&&mcp)return watch(f.key);
+   go();
+  };
+  tabs.appendChild(b);
+ });
+ favMark();
+}
+function favMark(){
+ var on=!!curKey&&favs.some(function(f){return f.key===curKey});
+ $("favb").textContent=on?"★":"☆";$("favb").className=on?"on":"";
+ Array.prototype.forEach.call(tabs.children,function(b){b.className=curKey&&b.dataset.k===curKey?"on":""});
+}
+function go(){
+ var q=$("q").value.trim();if(!q)return;
+ try{localStorage.setItem("tva_city",q)}catch(e){}
+ if(!mcp)return fallback(q);
+ $("msg").textContent="ПОИСК СЕКТОРА…";
+ mcp.callTool(SRV,"widgets-search-claude",{queryParams:{query:q}}).then(function(r){
+  var p=P(r),list=(p&&p.results)||[];
+  if(!list.length){$("msg").textContent="Сектор «"+q+"» не найден в архиве.";mouth(true);say("Такого сектора нет. Попробуйте другое название!");return}
+  fillTabs(list.slice(0,4));watch(list[0].locationKey);
+ }).catch(function(e){fail(e)});
+}
+$("go").onclick=go;
+document.addEventListener("click",function(e){if(e.target.closest&&e.target.closest("button"))S.click()});
+var sb=$("snd");sb.textContent=snd?"🔊":"🔇";sb.onclick=function(){snd=!snd;sb.textContent=snd?"🔊":"🔇";try{localStorage.setItem("tva_snd",snd?"1":"0")}catch(e){}};
+$("q").onkeydown=function(e){if(e.key==="Enter"){e.preventDefault();go()}};
+$("q").oninput=function(){mouth(false)};
+
+function tick(){
+ var n=new Date(),h=n.getHours(),m=n.getMinutes(),s=n.getSeconds()+n.getMilliseconds()/1000;
+ $("clock").textContent=n.toLocaleTimeString("ru-RU");
+ $("sh").style.transform="rotate("+s*6+"deg)";$("mh").style.transform="rotate("+(m*6+s/10)+"deg)";$("hh").style.transform="rotate("+((h%12)*30+m/2)+"deg)";
+ requestAnimationFrame(tick);
+}
+tick();
+function mv(x,y){var dx=(x/innerWidth-.5)*4,dy=(y/innerHeight-.5)*3;["p1","p2"].forEach(function(id,i){var e=$(id);e.setAttribute("cx",(i?74:46)+dx);e.setAttribute("cy",58+dy)})}
+document.addEventListener("mousemove",function(e){mv(e.clientX,e.clientY)});
+document.addEventListener("touchmove",function(e){var t=e.touches[0];mv(t.clientX,t.clientY)},{passive:true});
+setInterval(function(){if(Date.now()<hold)return;if(phrases.length){pi=(pi+1)%phrases.length;say(phrases[pi])}},6000);
+
+var CH=[[130.8,155.6,196,233.1],[116.5,146.8,174.6,220],[103.8,130.8,155.6,196],[110,138.6,164.8,207.7]],AP=[0,2,1,3,2,1,3,1];
+function mst(){var ch=CH[Math.floor(mstep/8)%4],i=mstep%8;if(i===0)ch.forEach(function(n){tone(n,3,"sine",.018,0,0,true)});tone(ch[AP[i]]*2,.4,"triangle",.02,0,0,true);mstep++}
+function musicOn(on){mus=on;clearInterval(mT);if(on){initAudio();mT=setInterval(mst,380)}try{localStorage.setItem("tva_mus",on?"1":"0")}catch(e){}$("mus").textContent=on?"🎶":"🎵"}
+$("mus").onclick=function(){musicOn(!mus)};
+try{if(localStorage.getItem("tva_mus")==="1"){document.addEventListener("pointerdown",function f(){document.removeEventListener("pointerdown",f);musicOn(true)})}}catch(e){}
+var start="Кострома";try{start=localStorage.getItem("tva_city")||start}catch(e){}
+function begin(){$("q").value=start;mcp=OM;fillTabs();go();startFavs()}
+/* data source: Open-Meteo (free, no key) -> adapter in the shape the UI already uses */
+var tg=window.Telegram&&window.Telegram.WebApp;
+if(tg){try{tg.ready();tg.expand();if(tg.colorScheme)document.documentElement.setAttribute("data-theme",tg.colorScheme)}catch(e){}}
+var WMO={0:"Ясно",1:"Преимущественно ясно",2:"Переменная облачность",3:"Пасмурно",45:"Туман",48:"Изморозь",51:"Лёгкая морось",53:"Морось",55:"Сильная морось",56:"Ледяная морось",57:"Ледяная морось",61:"Небольшой дождь",63:"Дождь",65:"Сильный дождь",66:"Ледяной дождь",67:"Ледяной дождь",71:"Небольшой снег",73:"Снег",75:"Сильный снег",77:"Снежная крупа",80:"Ливень",81:"Сильный ливень",82:"Очень сильный ливень",85:"Снегопад",86:"Сильный снегопад",95:"Гроза",96:"Гроза с градом",99:"Гроза с сильным градом"};
+function wd(c){return WMO[c]||"Без данных"}
+function pad2(n){return n<10?"0"+n:""+n}
+function nm(key){return key.split("|")[1]||"Сектор"}
+var mem={};
+function fetchFc(key){
+ var m=mem[key];if(m&&Date.now()-m.t<45000)return m.p;
+ var ll=key.split("|")[0].split(",");
+ var url="https://api.open-meteo.com/v1/forecast?latitude="+ll[0]+"&longitude="+ll[1]+"&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max&minutely_15=precipitation&forecast_days=7&timezone=auto";
+ var p=fetch(url).then(function(r){if(!r.ok)throw{code:"upstream_error"};return r.json()}).catch(function(e){delete mem[key];throw e&&e.code?e:{code:"server_unavailable"}});
+ mem[key]={t:Date.now(),p:p};return p;
+}
+var BUILD={
+ "widgets-current-claude":function(j,key){var c=j.current;return{currentConditions:{temperatureValue:c.temperature_2m,phrase:wd(c.weather_code),realFeel:Math.round(c.apparent_temperature)+"°",isDayTime:c.is_day===1,extended:{wind:Math.round(c.wind_speed_10m)+" км/ч",precipitation:(c.precipitation||0)+" мм",humidityValue:c.relative_humidity_2m}},location:{localTime:String(c.time).slice(11,16),info:{name:nm(key)}},alerts:[]}},
+ "widgets-daily-claude":function(j){var d=j.daily;return{dailyForecast:d.time.map(function(t,i){var dt=new Date(t+"T12:00:00"),hi=d.temperature_2m_max[i],lo=d.temperature_2m_min[i],pp=d.precipitation_probability_max[i]||0,w=Math.round(d.wind_speed_10m_max[i]||0)+" км/ч";
+  return{shortDayOfWeek:dt.toLocaleDateString("ru-RU",{weekday:"short"}),displayDate:pad2(dt.getDate())+"."+pad2(dt.getMonth()+1),longDisplayDate:dt.toLocaleDateString("ru-RU",{weekday:"short",day:"numeric",month:"short"}),alerts:[],
+   day:{temperature:hi,displayTemperature:Math.round(hi)+"°",phrase:wd(d.weather_code[i]),rainProbabilityValue:pp,snowProbabilityValue:0,alerts:[],extended:{wind:w,rainValue:d.precipitation_sum[i]||0}},
+   night:{temperature:lo,displayTemperature:Math.round(lo)+"°",rainProbabilityValue:pp,snowProbabilityValue:0,alerts:[],extended:{wind:w,rainValue:0}}}})}},
+ "widgets-hourly-claude":function(j){var h=j.hourly,from=String(j.current.time).slice(0,13),out=[];for(var i=0;i<h.time.length&&out.length<12;i++){if(h.time[i].slice(0,13)>=from)out.push({temperatureValue:h.temperature_2m[i],dateTime:h.time[i].slice(11,13),extended:{rainProbability:(h.precipitation_probability[i]||0)+" %"}})}return{hourlyForecast:out}},
+ "widgets-minutecast-claude":function(j){var m=j.minutely_15,v=[],mins=[];if(m&&m.time){for(var i=0;i<m.time.length&&v.length<8;i++){if(m.time[i]>=j.current.time)v.push(m.precipitation[i]||0)}}
+  for(var k=0;k<v.length*15;k++)mins.push({dbz:v[Math.floor(k/15)]||0});return{minuteCastForecast:{minutes:mins,summary120:"Осадки: шаг данных 15 минут"}}}
+};
+var OM={
+ callTool:function(srv,tool,input){
+  if(tool!=="widgets-search-claude")return Promise.reject({code:"bad_request"});
+  return fetch("https://geocoding-api.open-meteo.com/v1/search?count=5&language=ru&format=json&name="+encodeURIComponent(input.queryParams.query)).then(function(r){if(!r.ok)throw{code:"upstream_error"};return r.json()}).then(function(j){return{payload:{results:(j.results||[]).map(function(r){var n=r.name+(r.admin1&&r.admin1!==r.name?", "+r.admin1:"");return{name:n,locationKey:r.latitude+","+r.longitude+"|"+n}})}}}).catch(function(e){throw e&&e.code?e:{code:"server_unavailable"}});
+ },
+ watchTool:function(srv,tool,input,handler,opts){
+  var key=input.queryParams.locationKey,alive=true,b=BUILD[tool];
+  function run(){fetchFc(key).then(function(j){if(alive)handler({type:"data",result:{payload:b(j,key)}})}).catch(function(e){if(alive)handler({type:"error",error:{code:(e&&e.code)||"server_unavailable"}})})}
+  run();var t=setInterval(run,Math.max(30000,(opts&&opts.refetchInterval)||60000));
+  return function(){alive=false;clearInterval(t)};
+ }
+};
+/* timelines */
+var favs=[],sac=0,sel=null,fUn=[],curKey=null,curName="",view=1,rq=0;
+var DEF=[{n:"Кострома",q:"Кострома"},{n:"Нетания",q:"Нетания"}];
+try{favs=JSON.parse(localStorage.getItem("tva_favs")||"null")||[];sac=+localStorage.getItem("tva_sac")||0}catch(e){}
+favs=favs.filter(function(f){return!f.key||f.key.indexOf("|")>0});
+if(!favs.length)favs=DEF.map(function(x){return{n:x.n,q:x.q}});
+if(sac>=favs.length)sac=0;
+document.getElementById("vweather").parentNode.insertBefore(document.querySelector(".mascot"),$("vweather"));
+function saveFavs(){try{localStorage.setItem("tva_favs",JSON.stringify(favs.map(function(f){return{n:f.n,q:f.q,key:f.key,cc:f.cc,en:f.en}})));localStorage.setItem("tva_sac",sac)}catch(e){}fillTabs()}
+function thr(x){var d=x.day||{},n=x.night||{},de=d.extended||{},ne=n.extended||{};
+ var w=Math.max(num(de.wind,0),num(ne.wind,0)),r=(de.rainValue||0)+(ne.rainValue||0),t=d.temperature==null?15:d.temperature;
+ var al=((x.alerts||[]).length+(d.alerts||[]).length+(n.alerts||[]).length)>0;
+ return al?5:Math.min(5,Math.max(1,Math.round(w/12+Math.abs(t-15)/18+r*2)))}
+function rainP(x){var d=x.day||{},n=x.night||{};return Math.max(d.rainProbabilityValue||0,n.rainProbabilityValue||0,d.snowProbabilityValue||0,n.snowProbabilityValue||0)}
+function hasAl(x){var d=x.day||{},n=x.night||{};return((x.alerts||[]).length+(d.alerts||[]).length+(n.alerts||[]).length)>0}
+function draw(){if(rq)return;rq=1;requestAnimationFrame(function(){rq=0;render()})}
+function render(){
+ if(view!==2)return;
+ if(!favs.length){$("lsvg").innerHTML='<div class="dline">Линий нет. Откройте сектор на вкладке «Погода» и нажмите ☆.</div>';return}
+ var n=favs.length,W=340,top=26,lh=78,H=top+n*lh+6,X0=100,DX=56,days=null;
+ favs.forEach(function(f){if(!days&&f.days)days=f.days});
+ var g='<svg viewBox="0 0 '+W+' '+H+'"><g fill="currentColor" style="color:var(--ink)"><text x="6" y="14" font-size="10" fill="#d9631e">СЕЙЧАС</text>';
+ if(days)days.forEach(function(x,i){g+='<text x="'+(X0+i*DX)+'" y="14" font-size="10" text-anchor="middle" opacity=".75">'+esc(x.shortDayOfWeek)+' '+esc(x.displayDate)+'</text>'});
+ var sy=top+sac*lh+lh/2;
+ favs.forEach(function(f,li){
+  var ly=top+li*lh+lh/2,sc=li===sac,col=sc?"#d9631e":"currentColor";
+  g+='<path d="M14 '+sy+' C40 '+sy+' 30 '+ly+' 66 '+ly+'" fill="none" stroke="'+col+'" stroke-width="'+(sc?3.5:1.8)+'" '+(sc?'':'stroke-dasharray="4 4" opacity=".6"')+'/>';
+  g+='<text class="nd" data-l="'+li+'" data-d="0" x="70" y="'+(ly-26)+'" font-size="11" font-weight="bold" fill="'+(sc?"#d9631e":"currentColor")+'">'+(sc?"✦ ":"")+esc(f.n.slice(0,16))+'</text>';
+  if(!f.days){g+='<text x="'+X0+'" y="'+(ly+4)+'" font-size="10" opacity=".7">'+(f.bad?"СЕКТОР НЕ НАЙДЕН":f.err?"НЕТ СВЯЗИ ("+esc(f.err)+")":"СИНХРОНИЗАЦИЯ…")+'</text>';return}
+  var ds=f.days.slice(0,5),ts=ds.map(function(x){return x.day.temperature}),mn=Math.min.apply(null,ts),mx=Math.max.apply(null,ts),rg=Math.max(2,mx-mn),cut=-1;
+  var pts=ds.map(function(x,i){var th=thr(x);if(cut<0&&th>=4)cut=i;return{x:X0+i*DX,y:ly-((x.day.temperature-mn)/rg-.5)*28+6,th:th}});
+  g+='<line x1="66" y1="'+ly+'" x2="'+pts[0].x+'" y2="'+pts[0].y+'" stroke="'+col+'" stroke-width="'+(sc?3.5:1.8)+'"/>';
+  for(var i=0;i<pts.length-1;i++){var dsh=cut>=0&&i>=cut;
+   g+='<line '+(dsh?'stroke-dasharray="3 4" stroke="#e03a2a"':'class="draw" pathLength="1" style="animation-delay:'+(li*.15+i*.2)+'s" stroke="'+col+'"')+' x1="'+pts[i].x+'" y1="'+pts[i].y+'" x2="'+pts[i+1].x+'" y2="'+pts[i+1].y+'" stroke-width="'+(sc?3.5:2)+'"/>'}
+  pts.forEach(function(p,i){var x=ds[i],ev="";
+   if(hasAl(x))ev="⚠";else if(i===cut)ev="✂";else if(rainP(x)>=60)ev="☂";else if(i>0&&x.day.temperature-ds[i-1].day.temperature<=-5)ev="▼";
+   var on=sel&&sel.l===li&&sel.d===i,fill=p.th>=4?"#e03a2a":p.th===3?"#c9962b":"var(--paper)";
+   g+='<g class="nd" data-l="'+li+'" data-d="'+i+'"><circle cx="'+p.x+'" cy="'+p.y+'" r="15" fill="transparent"/><circle cx="'+p.x+'" cy="'+p.y+'" r="'+(on?8:6)+'" fill="'+fill+'" stroke="'+col+'" stroke-width="2.5"/>'+
+    (on?'<circle cx="'+p.x+'" cy="'+p.y+'" r="11" fill="none" stroke="#d9631e" stroke-dasharray="2 3"/>':'')+
+    '<text x="'+p.x+'" y="'+(p.y+19)+'" font-size="10" text-anchor="middle">'+esc(x.day.displayTemperature)+'</text>'+
+    (ev?'<text x="'+p.x+'" y="'+(p.y-11)+'" font-size="11" text-anchor="middle" fill="'+(ev==="☂"||ev==="▼"?"#d9631e":"#e03a2a")+'">'+ev+'</text>':'')+'</g>'});
+ });
+ g+='</g></svg>';$("lsvg").innerHTML=g;
+ Array.prototype.forEach.call($("lsvg").querySelectorAll(".nd"),function(el){el.onclick=function(){var l=+el.getAttribute("data-l"),d=+el.getAttribute("data-d");if(favs[l].days){sel={l:l,d:d};S.beep();render();dossier()}}});
+}
+function dossier(){
+ var box=$("dost"),bt=$("dbt");bt.innerHTML="";
+ if(!sel||!favs[sel.l]||!favs[sel.l].days){box.textContent="Выберите узел на линии.";return}
+ var f=favs[sel.l],x=f.days[sel.d];if(!x){box.textContent="Выберите узел на линии.";return}
+ var d=x.day||{},n=x.night||{},th=thr(x),de=d.extended||{},ev=[];
+ if(hasAl(x))ev.push("официальное предупреждение");if(th>=4)ev.push("линия подлежит обрезке");if(rainP(x)>=60)ev.push("осадки");
+ box.innerHTML="";
+ [ "СЕКТОР: "+f.n.toUpperCase()+" · "+x.longDisplayDate,
+   "ДЕНЬ "+d.displayTemperature+" / НОЧЬ "+n.displayTemperature+" · "+(d.phrase||""),
+   "ОСАДКИ "+rainP(x)+"% · ВЕТЕР "+num(de.wind,0)+" км/ч · УГРОЗА "+th+"/5",
+   "СОБЫТИЯ: "+(ev.length?ev.join(", "):"отклонений нет")].forEach(function(t){var e=document.createElement("div");e.textContent=t;box.appendChild(e)});
+ function btn(t,fn){var b=document.createElement("button");b.type="button";b.textContent=t;b.onclick=fn;bt.appendChild(b)}
+ if(f.key)btn("ОТКРЫТЬ СЕКТОР",function(){setView(1);$("q").value=f.n;if(mcp)watch(f.key)});
+ if(sel.l!==sac)btn("СДЕЛАТЬ СВЯЩЕННОЙ",function(){sac=sel.l;saveFavs();render()});
+ if(favs.length)btn("✕ УДАЛИТЬ",function(){favs.splice(sel.l,1);if(sel.l<sac)sac--;if(sac>=favs.length)sac=0;saveFavs();sel=null;startFavs();render();dossier()});
+}
+function onFav(ev,f){
+ if(ev.type==="error"){f.err=ev.error&&ev.error.code||"ошибка";draw();return}
+ var p=P(ev.result),a=p&&p.dailyForecast;if(!a||!a.length){f.err="нет данных";draw();return}
+ f.days=a.slice(0,5);f.err=null;draw();if(sel)dossier();
+}
+function startFavs(){
+ fUn.forEach(function(u){try{u()}catch(e){}});fUn=[];
+ if(!mcp)return;
+ favs.forEach(function(f){
+  var run=function(){fUn.push(mcp.watchTool(SRV,"widgets-daily-claude",{queryParams:{locationKey:f.key,unit:"metric",lang:"ru"}},function(ev){onFav(ev,f)},{refetchInterval:600000}))};
+  if(f.key)return run();
+  mcp.callTool(SRV,"widgets-search-claude",{queryParams:{query:f.q||f.n}}).then(function(r){var p=P(r),l=(p&&p.results)||[];if(l.length){f.key=l[0].locationKey;saveFavs();run()}else{f.bad=true;draw()}}).catch(function(e){f.err=e&&e.code||"ошибка";draw()});
+ });
+ draw();
+}
+function mRunTo(target){try{if(!target||window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;var source=document.querySelector(".minute-svg");if(!source)return;var a=source.getBoundingClientRect(),b=target.getBoundingClientRect(),runner=source.cloneNode(true);runner.querySelectorAll("[id]").forEach(function(n){n.removeAttribute("id")});runner.classList.add("mm-runner");runner.style.cssText="position:fixed!important;left:"+a.left+"px!important;top:"+a.top+"px!important;width:64px!important;height:auto!important;margin:0!important;z-index:99999!important;pointer-events:none!important;filter:drop-shadow(0 2px 5px rgba(0,0,0,.4));";document.body.appendChild(runner);var dx=b.left+b.width/2-a.left-a.width/2,dy=b.top+b.height/2-a.top-a.height/2;var an=runner.animate([{transform:"translate(0,0) rotate(0deg) scale(.7)"},{transform:"translate("+dx+"px,"+(dy-22)+"px) rotate(360deg) scale(.7)"}],{duration:850,easing:"cubic-bezier(.2,.8,.2,1)"});an.onfinish=function(){runner.remove()};setTimeout(function(){if(runner.isConnected)runner.remove()},1200)}catch(e){}}
+function setView(v){if(view!==v)mRunTo($("vb"+v));if(view===3&&v!==3)mJump(false);view=v;$("vweather").hidden=v!==1;$("vlines").hidden=v!==2;$("vradio").hidden=v!==3;$("vviz").hidden=v!==4;
+ [1,2,3,4].forEach(function(i){$("vb"+i).className=v===i?"on":""});
+ if(v===2){render();dossier();say("Главный терминал временных линий. Не создавайте ветвлений!")}
+ if(v===3){rOpen();if(R.cur&&!RA.paused)mJump(true)}
+ if(v===4)vzStart();else vzStop();}
+$("vb1").onclick=function(){setView(1)};$("vb2").onclick=function(){setView(2)};$("vb3").onclick=function(){setView(3)};
+$("favb").onclick=function(){
+ if(!curKey){$("msg").textContent="Сначала загрузите сектор.";return}
+ var i=favs.findIndex(function(f){return f.key===curKey});
+ if(i>=0){favs.splice(i,1);if(i<sac)sac--;if(sac>=favs.length)sac=0;sel=null;saveFavs();startFavs();S.beep();$("msg").textContent="Сектор удалён из «Линий».";render();dossier();return}
+ if(favs.length>=6){$("msg").textContent="Избранное заполнено (6). Нажмите ★ у ненужного сектора, чтобы убрать его.";S.err();return}
+ favs.push({n:(curName||"СЕКТОР").slice(0,22),key:curKey});saveFavs();startFavs();S.beep();$("msg").textContent="Сектор добавлен в «Линии».";
+};
+
+/* touch interference */
+function glitch(box,x,y,big){
+ var r=big?72:46,c=document.createElement("canvas");c.width=c.height=r*2;c.className="fxc";
+ c.style.left=(x-r)+"px";c.style.top=(y-r)+"px";c.style.width=c.style.height=r*2+"px";
+ var g=c.getContext("2d"),im=g.createImageData(r*2,r*2),d=im.data;
+ for(var i=0;i<d.length;i+=4){var px=(i/4)%(r*2)-r,py=Math.floor(i/4/(r*2))-r,dist=Math.sqrt(px*px+py*py);
+  if(dist<r&&Math.random()>dist/r*.85){var v=90+Math.random()*165;d[i]=v;d[i+1]=v*(.55+Math.random()*.3);d[i+2]=v*.3;d[i+3]=60+Math.random()*190}}
+ g.putImageData(im,0,0);box.appendChild(c);setTimeout(function(){c.remove()},650);
+ for(var k=0;k<3;k++){(function(){var b=document.createElement("div");b.className="fxb";b.style.top=(y-34+Math.random()*68)+"px";b.style.height=(2+Math.random()*6)+"px";box.appendChild(b);setTimeout(function(){b.remove()},320)})()}
+ var t=box.classList.contains("clk")?box.firstElementChild:box;
+ t.classList.remove("tear");t.offsetHeight;t.classList.add("tear");
+ S.static();
+}
+var CL=["Ш-ш-ш! Не трогайте стрелки!","Помехи на линии… бзззт!","Эй! Это казённое имущество Бюро.","Сигнал потерян… и найден."],tapN=0,tapNeed=2,px=0,py=0,pt=0,pmv=false,pd=false;
+function fxTarget(e){return e.target.closest&&!e.target.closest(".nofx,button,input,.nd")?e.target.closest(".crt,.card,.clk"):null}
+function fx(e,t){
+ var r=t.getBoundingClientRect();glitch(t,e.clientX-r.left,e.clientY-r.top,t.classList.contains("crt"));
+ if(t.classList.contains("clk")){say(CL[Math.floor(Math.random()*CL.length)]);mouth(true);setTimeout(function(){mouth(false)},700)}
+}
+document.addEventListener("pointerdown",function(e){pd=true;pmv=false;px=e.clientX;py=e.clientY;pt=Date.now()});
+document.addEventListener("pointermove",function(e){if(pd&&!pmv&&Math.abs(e.clientX-px)+Math.abs(e.clientY-py)>8)pmv=true});
+document.addEventListener("pointerup",function(e){
+ var tap=pd&&!pmv&&Date.now()-pt<600;pd=false;if(!tap)return;
+ var t=fxTarget(e);if(!t)return;
+ if(++tapN<tapNeed)return;tapN=0;tapNeed=2+Math.floor(Math.random()*2);fx(e,t);
+});
+document.addEventListener("pointercancel",function(){pd=false});
+
+/* radio */
+var RA=new Audio(),R={l:[],i:-1,m:"sec",sec:null,sa:[],f:[],ec:0,cur:"",cs:null,init:0},rbI=0,dT=0;
+var RB=["https://de1.api.radio-browser.info","https://de2.api.radio-browser.info","https://fi1.api.radio-browser.info","https://at1.api.radio-browser.info"];
+var RT=[{n:"SomaFM · Secret Agent",u:"https://ice1.somafm.com/secretagent-128-mp3"},{n:"SomaFM · Space Station Soma",u:"https://ice1.somafm.com/spacestation-128-mp3"},{n:"SomaFM · Deep Space One",u:"https://ice1.somafm.com/deepspaceone-128-mp3"},{n:"SomaFM · Groove Salad",u:"https://ice1.somafm.com/groovesalad-128-mp3"}];
+RA.preload="none";RA.volume=.7;
+try{R.f=JSON.parse(localStorage.getItem("tva_rfavs")||"[]")||[];var sv=localStorage.getItem("tva_rvol");if(sv!==null)RA.volume=Math.max(0,Math.min(1,sv/100))}catch(e){}
+$("rvol").value=Math.round(RA.volume*100);
+Array.prototype.forEach.call((function(){$("req").innerHTML=Array(18).join("<i></i>");return $("req").children})(),function(b){b.style.animationDuration=(.3+Math.random()*.6)+"s";b.style.animationDelay=(-Math.random())+"s"});
+function rMsg(t){$("rmsg").textContent=t||""}
+function rSt(t){$("rstat").textContent=t}
+function rEq(on){$("req").classList.toggle("on",on)}
+function rFr(i){var n=R.l.length;return(87.5+(n>1?i/(n-1):.5)*20.5).toFixed(1)}
+function rShow(i){var s=R.l[i];if(!s)return;$("rfreq").textContent=rFr(i)+" МГц";$("rname").textContent=s.n}
+function rNorm(a){var seen={},o=[];(a||[]).forEach(function(s){var u=s.url_resolved||s.url||s.u,n=String(s.name||s.n||"").trim(),k=n.toLowerCase();if(!u||u.indexOf("https://")!==0||!n||seen[k])return;seen[k]=1;o.push({n:n.slice(0,60),u:u,c:s.countrycode||s.c||"",b:s.bitrate||s.b||0})});return o}
+function rb(path){var n=0;function t(){return fetch(RB[(rbI+n)%RB.length]+path).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){rbI=(rbI+n)%RB.length;return j}).catch(function(){if(++n>=RB.length)throw 0;return t()})}return t()}
+function rDraw(){var L=$("rlist"),top=L.scrollTop;
+ L.innerHTML=R.l.map(function(s,i){var f=R.f.some(function(x){return x.u===s.u});return'<div class="rs'+(s.u===R.cur?" on":"")+'"><button data-i="'+i+'">'+esc(s.n)+'<small>'+esc((s.c||"")+(s.b?" "+s.b+"k":""))+'</small></button><button class="f" data-f="'+i+'">'+(f?"★":"☆")+'</button></div>'}).join("")||'<div class="rs"><button disabled>Список пуст</button></div>';
+ L.scrollTop=top}
+function rSet(a,label){R.l=a;R.i=a.findIndex(function(s){return s.u===R.cur});var d=$("rdial");d.max=Math.max(0,a.length-1);d.value=Math.max(0,R.i);rDraw();if(R.i>=0)rShow(R.i);
+ rMsg(a.length?label+" · ЧАСТОТ: "+a.length:"Ничего не найдено. Попробуйте другой запрос.")}
+function rFail(){rMsg("Каталог частот недоступен. Откройте «Резерв» — там запасные станции.")}
+function rFavMark(){$("rfav").textContent=R.cs&&R.f.some(function(x){return x.u===R.cs.u})?"★":"☆"}
+function rMs(s){try{if(navigator.mediaSession){navigator.mediaSession.metadata=new MediaMetadata({title:s.n,artist:"Бюро временных прогнозов",album:"Радио TVA"});navigator.mediaSession.setActionHandler("nexttrack",function(){rNext(1)});navigator.mediaSession.setActionHandler("previoustrack",function(){rNext(-1)})}}catch(e){}}
+function rTune(i){var s=R.l[i];if(!s)return;R.i=i;R.cur=s.u;R.cs=s;R.ec=0;$("rdial").value=i;rShow(i);rSt("НАСТРОЙКА…");S.tune();
+ if(mus)musicOn(false);
+ RA.src=s.u;var p=RA.play();if(p&&p.catch)p.catch(function(e){if(e&&e.name==="NotAllowedError")rSt("НАЖМИТЕ ▶")});
+ var L=$("rlist"),ch=L.children;Array.prototype.forEach.call(ch,function(el,k){el.classList.toggle("on",k===i)});if(ch[i])L.scrollTop=ch[i].offsetTop-L.clientHeight/2+20;
+ rMs(s);rFavMark();say("Частота "+rFr(i)+" МГц: «"+s.n+"». Бюро одобряет!")}
+function rNext(d){var n=R.l.length;if(!n)return;rTune(R.i<0?(d>0?0:n-1):(R.i+d+n)%n)}
+function rToggle(s){if(!s)return;var k=R.f.findIndex(function(x){return x.u===s.u});
+ if(k>=0)R.f.splice(k,1);else{if(R.f.length>=30){rMsg("Избранных частот максимум 30.");S.err();return}R.f.push(s)}
+ try{localStorage.setItem("tva_rfavs",JSON.stringify(R.f))}catch(e){}S.beep();
+ if(R.m==="fav")rMode("fav");else rDraw();rFavMark()}
+function tr(s){var m={а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ё:"e",ж:"zh",з:"z",и:"i",й:"y",к:"k",л:"l",м:"m",н:"n",о:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ф:"f",х:"kh",ц:"ts",ч:"ch",ш:"sh",щ:"sch",ъ:"",ы:"y",ь:"",э:"e",ю:"yu",я:"ya"};return s.toLowerCase().replace(/[а-яё]/g,function(c){return m[c]})}
+function ccOf(f){if(f.cc&&f.en)return Promise.resolve(f.cc);var ll=f.key.split("|")[0].split(",").map(Number);
+ return fetch("https://geocoding-api.open-meteo.com/v1/search?count=10&language=en&format=json&name="+encodeURIComponent(nm(f.key).split(",")[0])).then(function(r){return r.json()}).then(function(j){var b=null,bd=1e9;(j.results||[]).forEach(function(x){var d=Math.abs(x.latitude-ll[0])+Math.abs(x.longitude-ll[1]);if(d<bd){bd=d;b=x}});if(!b||!b.country_code)throw 0;f.cc=b.country_code;f.en=b.name;saveFavs();return f.cc})}
+function rChips(){var a=favs.filter(function(f){return f.key});if(!a.length&&curKey)a=[{n:curName||"СЕКТОР",key:curKey}];
+ if(!R.sec||!a.some(function(x){return x.key===R.sec.key}))R.sec=a.find(function(x){return x.key===curKey})||a[0]||null;
+ R.sa=a;$("rchipbox").innerHTML=a.map(function(f,i){return'<button type="button" data-s="'+i+'"'+(R.sec&&R.sec.key===f.key?' class="on"':'')+'>'+esc(f.n.split(",")[0])+'</button>'}).join("")}
+function rSector(){rChips();var f=R.sec;if(!f){rMsg("Сначала загрузите сектор на вкладке «Погода».");return}
+ var city=nm(f.key).split(",")[0];rMsg("СКАНИРУЮ СЕКТОР «"+city.toUpperCase()+"»…");
+ ccOf(f).then(function(cc){var base="/json/stations/search?hidebroken=true&order=clickcount&reverse=true&limit=60&countrycode="+cc;
+  var en=f.en&&f.en.toLowerCase()!==city.toLowerCase()?f.en:tr(city),q=function(n){return rb(base+"&name="+encodeURIComponent(n)).catch(function(){return[]})};
+  return Promise.all([q(city),q(en),rb(base)]).then(function(r){rSet(rNorm(r[0].concat(r[1],r[2])),"СЕКТОР "+city.toUpperCase())})}).catch(rFail)}
+function rMode(m){R.m=m;Array.prototype.forEach.call($("rmodes").children,function(b){b.className=b.dataset.m===m?"on":""});$("rchipbox").hidden=m!=="sec";
+ if(m==="fav")return rSet(rNorm(R.f),"ИЗБРАННОЕ");
+ if(m==="tva")return rSet(rNorm(RT),"РЕЗЕРВ БЮРО");
+ rMsg("ПОИСК ЧАСТОТ…");
+ if(m==="top")return rb("/json/stations/search?hidebroken=true&order=clickcount&reverse=true&limit=60").then(function(j){rSet(rNorm(j),"ТОП МИРА")}).catch(rFail);
+ rSector()}
+function rSearch(){var q=$("rq").value.trim();if(!q)return;R.m="find";Array.prototype.forEach.call($("rmodes").children,function(b){b.className=""});$("rchipbox").hidden=true;rMsg("ПОИСК «"+q.toUpperCase()+"»…");
+ rb("/json/stations/search?hidebroken=true&order=clickcount&reverse=true&limit=60&name="+encodeURIComponent(q)).then(function(j){rSet(rNorm(j),"ПОИСК «"+q.toUpperCase()+"»")}).catch(rFail)}
+function rOpen(){if(!R.init){R.init=1;rMode("sec")}else if(R.m==="sec")rChips();rFavMark();say("Радиоприёмник Бюро. Крутите ручку настройки!")}
+$("rmodes").onclick=function(e){var b=e.target.closest("button");if(b)rMode(b.dataset.m)};
+$("rchipbox").onclick=function(e){var b=e.target.closest("button");if(b){R.sec=R.sa[+b.dataset.s];rSector()}};
+$("rlist").onclick=function(e){var b=e.target.closest("button[data-i],button[data-f]");if(!b)return;if(b.dataset.i!==undefined)rTune(+b.dataset.i);else rToggle(R.l[+b.dataset.f])};
+$("rgo").onclick=rSearch;$("rq").onkeydown=function(e){if(e.key==="Enter"){e.preventDefault();rSearch()}};
+$("rprev").onclick=function(){rNext(-1)};$("rnext").onclick=function(){rNext(1)};
+$("rfav").onclick=function(){if(R.cs)rToggle(R.cs)};
+$("rplay").onclick=function(){if(!R.cur){rNext(1);return}if(RA.paused){RA.src=R.cur;var p=RA.play();if(p&&p.catch)p.catch(function(){})}else RA.pause()};
+$("rdial").oninput=function(){var t=Date.now();rShow(+this.value);if(t-dT>140){dT=t;S.tune()}};
+$("rdial").onchange=function(){rTune(+this.value)};
+$("rvol").oninput=function(){RA.volume=this.value/100;try{localStorage.setItem("tva_rvol",this.value)}catch(e){}};
+$("radd").onclick=function(){$("rpan").hidden=!$("rpan").hidden};
+$("rps").onclick=function(){var n=$("rpn").value.trim()||"Моя станция",u=$("rpu").value.trim();
+ if(u.indexOf("https://")!==0){rMsg("Нужна ссылка на поток, начинающаяся с https://");S.err();return}
+ if(!R.f.some(function(x){return x.u===u}))R.f.push({n:n.slice(0,60),u:u,c:"",b:0});
+ try{localStorage.setItem("tva_rfavs",JSON.stringify(R.f))}catch(e){}
+ $("rpan").hidden=true;$("rpn").value="";$("rpu").value="";rMode("fav");rTune(R.l.findIndex(function(x){return x.u===u}))};
+RA.onplaying=function(){R.ec=0;rSt("В ЭФИРЕ");rEq(true);$("rplay").textContent="⏸";$("rslot").classList.add("play");if(view===3)mJump(true)};
+RA.onwaiting=function(){rSt("БУФЕР…")};
+RA.onpause=function(){rSt("ПАУЗА");rEq(false);$("rplay").textContent="▶";$("rslot").classList.remove("play")};
+RA.onerror=function(){rEq(false);$("rplay").textContent="▶";rSt("СИГНАЛ ПОТЕРЯН");var c=R.cur;
+ if(++R.ec<=3){say("Сигнал потерян… ищу следующую частоту.");setTimeout(function(){if(R.cur===c)rNext(1)},2000)}else rMsg("Станции не отвечают. Попробуйте «Резерв».")};
+
+/* Минутка: чат и прыжок в экран радио */
+var hold=0,lastD=null,lastFc=null,hist=[],busy=false,mIn=false,mPh=null,mAn=null;
+var SCRF="sepia(1) saturate(2.6) hue-rotate(-14deg) brightness(.9) contrast(1.25) drop-shadow(0 0 5px #ffb347)";
+var JK=["Почему часы не умеют хранить секреты? Они всё время выдают время.","Бюро одобряет эту шутку. Ветвлений не обнаружено!","Я бы рассказала шутку про временные петли, но вы уже слышали её вчера.","Что говорит стрелка стрелке? «Подожди, я тебя догоню!»"];
+(function(){var m=document.querySelector(".mascot"),r=document.createElement("div");r.className="search nofx";r.style.margin="0 0 12px";
+ r.innerHTML='<input id="cin" placeholder="Спросить Минутку…" autocomplete="off" maxlength="200" style="text-transform:none;font-size:16px"><button id="csend" type="button">▶</button>';
+ m.parentNode.insertBefore(r,m.nextSibling)})();
+function mLocal(t){
+ t=t.toLowerCase().replace(/ё/g,"е");var m,d=lastD;
+ if(/привет|здравств|добрый (день|вечер|утро)|^хай/.test(t))return"Здравствуйте, агент! Время — драгоценный ресурс. Спросите про погоду, радио или шутку.";
+ if(/кто ты|как тебя зовут|ты кто/.test(t))return"Я Минутка — талисман Бюро временных прогнозов. Слежу, чтобы никто не плодил ветвления!";
+ if(/что (ты )?умеешь|помощь|команды/.test(t))return"Могу рассказать погоду и прогноз, сменить сектор («покажи Москву»), включить радио, поставить паузу, переключить станцию, пошутить. Остальное спрошу у архива!";
+ if(/спасибо|благодар/.test(t))return"Всегда пожалуйста. Бюро ценит вежливых агентов!";
+ if(/шутк|анекдот|рассмеши/.test(t))return JK[Math.floor(Math.random()*JK.length)];
+ if(/который час|сколько времени|сколько сейчас/.test(t))return"По времени Бюро сейчас "+new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})+".";
+ m=t.match(/(?:погод[ауые]? в|покажи|открой|переключи на|сектор)\s+([а-яa-z -]{2,30})$/);
+ if(m&&!/^(погод|радио|прогноз|температур|завтра|шутк)/.test(m[1].trim())){var c=m[1].trim();$("q").value=c;setView(1);go();return"Открываю сектор «"+c+"». Не создавайте ветвлений!"}
+ if(/радио|музык/.test(t)&&/выключ|стоп|пауз/.test(t)){RA.pause();return"Эфир на паузе."}
+ if(/следующ|дальше|переключи станц/.test(t)){setView(3);rNext(1);return"Ищу следующую частоту!"}
+ if(/радио|музык|включи|поставь/.test(t)){setView(3);if(R.cur&&RA.paused){RA.src=R.cur;var p=RA.play();if(p&&p.catch)p.catch(function(){})}return"Открываю приёмник Бюро. Выберите частоту — я потанцую!"}
+ if(/завтра|прогноз|неделю|послезавтра/.test(t)&&lastFc&&lastFc[1]){var x=lastFc[1],y=x.day||{},n=x.night||{};return"Завтра в секторе «"+(d?d.n:"")+"»: днём "+y.displayTemperature+", ночью "+n.displayTemperature+", "+String(y.phrase||"").toLowerCase()+"."}
+ if(/погод|температур|градус|тепл|холодно|на улице|ветер|дожд|влажн|снег/.test(t)&&d)return"Сектор «"+d.n+"»: "+(d.t>0?"+":"")+d.t+"°, "+String(d.c).split(" · ")[0].toLowerCase()+", ветер "+d.w+" км/ч, влажность "+d.h+"%.";
+ return null}
+function mSay(t){hold=Date.now()+30000;say(t)}
+function mAsk(){var i=$("cin"),t=i.value.trim();if(!t||busy)return;i.value="";
+ var l=mLocal(t);if(l){mSay(l);return}
+ busy=true;mSay("Сверяюсь с архивом временных линий…");
+ var ctx=lastD?"Сейчас в секторе "+lastD.n+": "+lastD.t+"°, "+lastD.c+".":"",ac=new AbortController(),to=setTimeout(function(){ac.abort()},12000);
+ fetch("https://gen.pollinations.ai/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},signal:ac.signal,body:JSON.stringify({model:"openai",private:true,messages:[{role:"system",content:"Ты — Минутка, говорящие часы-талисман Бюро временных прогнозов (TVA). Отвечай по-русски, коротко: 1–2 предложения, с лёгким юмором чиновника Бюро. "+ctx}].concat(hist.slice(-6),[{role:"user",content:t}])})})
+ .then(function(r){if(!r.ok)throw 0;return r.json()})
+ .then(function(j){var a=String(j.choices[0].message.content||"").trim().slice(0,280);if(!a)throw 0;hist.push({role:"user",content:t},{role:"assistant",content:a});mSay(a)})
+ .catch(function(){mSay("Архив не отвечает. Бюро рекомендует спросить про погоду, радио или шутку!");mouth(true);setTimeout(function(){mouth(false)},1500)})
+ .then(function(){clearTimeout(to);busy=false})}
+$("csend").onclick=mAsk;$("cin").onkeydown=function(e){if(e.key==="Enter"){e.preventDefault();mAsk()}};
+function mJump(into){
+ var c=document.querySelector(".clk"),sl=$("rslot"),m=document.querySelector(".mascot");
+ if(!c||into===mIn)return;mIn=into;
+ var a=c.getBoundingClientRect();
+ if(into){mPh=document.createElement("div");mPh.className="clkgone";mPh.textContent="В ЭФИРЕ";m.insertBefore(mPh,c);sl.appendChild(c)}
+ else{if(mPh){mPh.remove();mPh=null}m.insertBefore(c,$("bubble"))}
+ c.classList.toggle("scr",into);
+ var b=c.getBoundingClientRect(),dx=a.left+a.width/2-b.left-b.width/2,dy=a.top+a.height/2-b.top-b.height/2,sc=a.width/(b.width||1)||1;
+ if(mAn)mAn.cancel();
+ mAn=c.animate([{transform:"translate("+dx+"px,"+dy+"px) scale("+sc+")",filter:into?"none":SCRF},
+  {transform:"translate("+dx/2+"px,"+(dy/2-60)+"px) scale("+(sc+1)/2+") rotate("+(into?180:-180)+"deg)",offset:.5},
+  {transform:"none",filter:into?SCRF:"none"}],{duration:900,easing:"cubic-bezier(.3,.7,.4,1)"});
+ mSay(into?"Прыг! Теперь я в эфире на частоте 77-R!":"Вернулась на пост. Время — драгоценный ресурс!")}
+
+/* Визуализатор TVA: локальные режимы Canvas 2D + процедурная сцена */
+var VZ={m:0,t:"",pal:0,run:false,pause:false,raf:0,last:0,T:0,w:0,h:240,seed:1,st:{},init:0},vzc=$("vzc"),vx=vzc.getContext("2d"),
+ PAL=["76,255,122","255,179,71"],RM=!!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches),
+ MF="ui-monospace,Menlo,Consolas,monospace",RMP=" .:-=+*#%@";
+function vzHash(s){var h=1779033703^s.length;for(var i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19}return(h^h>>>16)>>>0}
+function vzRng(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function vzN(x,y,t){var h=Math.imul(x,374761393)+Math.imul(y,668265263)+Math.imul(t,1274126177)+VZ.seed|0;h=Math.imul(h^h>>>13,1274126177);return((h^h>>>16)>>>0)/4294967296}
+function vzC(a){return"rgba("+PAL[VZ.pal]+","+a+")"}
+function vzFill(a){vx.shadowBlur=0;vx.fillStyle="rgba(3,9,5,"+a+")";vx.fillRect(0,0,VZ.w,VZ.h)}
+function vzSize(){var r=vzc.parentNode.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2);if(!r.width)return;VZ.w=Math.round(r.width);vzc.width=VZ.w*d;vzc.height=VZ.h*d;vx.setTransform(d,0,0,d,0,0);VZ.st={};vzFill(1)}
+function vzLines(t,mx){var ws=t.toUpperCase().split(/\s+/).filter(Boolean),L=[],cur=[];
+ ws.forEach(function(w){var c=Array.from(w);while(c.length>mx){if(cur.length){L.push(cur);cur=[]}L.push(c.splice(0,mx))}
+  if(cur.length&&cur.length+1+c.length>mx){L.push(cur);cur=[]}cur=cur.length?cur.concat([" "],c):c});
+ if(cur.length)L.push(cur);return L}
+function vzA(){
+ var W=VZ.w,H=VZ.h,k=+$("vzi").value/100,T=VZ.T,S=VZ.st;vzFill(RM?1:.32);
+ if(!S.L){S.fs=W<420?18:24;vx.font=S.fs+"px "+MF;S.cw=vx.measureText("M").width;S.L=vzLines(VZ.t,Math.max(6,Math.floor((W-28)/S.cw))).slice(0,Math.max(1,Math.floor((H-50)/(S.fs*1.35))))}
+ vx.textBaseline="top";vx.font="11px "+MF;vx.fillStyle=vzC(.55);vx.shadowColor=vzC(1);vx.shadowBlur=4;vx.fillText("> СЕАНС 77-R · БЮРО ВРЕМЕННЫХ ПРОГНОЗОВ",14,10);
+ var n=Math.floor(T/70),gb=Math.floor(T/3100),gl=!RM&&(T%3100)<170&&vzRng(gb*7919+VZ.seed)()<.35+.6*k,fl=RM?1:.9+.1*Math.sin(T/41),y=34,cx=-1,cy=0;
+ vx.font=S.fs+"px "+MF;vx.shadowBlur=8+12*k;vx.fillStyle=vzC(fl);
+ S.L.forEach(function(row,i){var m=Math.max(0,Math.min(row.length,n)),off=gl?Math.sin(i*12.9+gb)*8*k:0;
+  if(m>0){vx.fillText(row.slice(0,m).join(""),14+off,y);cx=14+off+m*S.cw;cy=y}n-=row.length;y+=S.fs*1.35});
+ if(cx>=0&&Math.floor(T/450)%2===0)vx.fillText("█",cx,cy);
+ if(gl){vx.shadowBlur=0;vx.fillStyle=vzC(.12);vx.fillRect(0,(T*.4)%H,W,10)}}
+function vzB(){
+ var W=VZ.w,H=VZ.h,k=+$("vzi").value/100,T=VZ.T,S=VZ.st;
+ if(!S.b){var fs=W<420?10:12;vx.font=fs+"px "+MF;var cw=vx.measureText("M").width,ch=Math.round(fs*1.2),cols=Math.max(10,Math.floor((W-8)/cw)),rows=Math.max(4,Math.floor((H-8)/ch)),sx=4,sy=Math.max(4,Math.round(4*ch/cw)),
+  oc=document.createElement("canvas");oc.width=cols*sx;oc.height=rows*sy;var o=oc.getContext("2d"),
+  L=vzLines(VZ.t,Math.max(4,Math.ceil(Math.sqrt(Array.from(VZ.t).length*1.4))+1)).slice(0,5),mxl=1;L.forEach(function(r){mxl=Math.max(mxl,r.length)});
+  o.fillStyle="#000";o.fillRect(0,0,oc.width,oc.height);o.fillStyle="#fff";o.textAlign="center";o.textBaseline="middle";
+  o.font="bold "+Math.max(6,Math.min(oc.height/L.length*.95,oc.width/(mxl*.66)))+"px sans-serif";
+  L.forEach(function(r,i){o.fillText(r.join(""),oc.width/2,(i+.5)*oc.height/L.length)});
+  var d=o.getImageData(0,0,oc.width,oc.height).data,b=new Float32Array(cols*rows);
+  for(var y=0;y<rows;y++)for(var x=0;x<cols;x++){var sum=0;for(var j=0;j<sy;j+=2)for(var i=0;i<sx;i+=2)sum+=d[((y*sy+j)*oc.width+x*sx+i)*4];b[y*cols+x]=sum/(Math.ceil(sx/2)*Math.ceil(sy/2)*255)}
+  S.b=b;S.cols=cols;S.rows=rows;S.fs=fs;S.ch=ch}
+ vzFill(1);vx.font=S.fs+"px "+MF;vx.textBaseline="top";vx.fillStyle=vzC(.95);vx.shadowColor=vzC(1);vx.shadowBlur=4+8*k;
+ var p=Math.min(1,T/1500),tf=Math.floor(T/140),tb=Math.floor(T/260);
+ for(var y=0;y<S.rows;y++){var s="";for(var x=0;x<S.cols;x++){var v=S.b[y*S.cols+x],nz=vzN(x,y,tf);
+  if(x/S.cols>p*1.25-nz*.25){s+=" ";continue}
+  if(v<.06){var q=vzN(x,y,tb);s+=q<.03+.09*k?(q<.015?".":"+"):" "}
+  else{var i2=Math.round(Math.pow(v,1.7-k*1.1)*9+(nz-.5)*1.6);s+=RMP[Math.max(1,Math.min(9,i2))]}}
+  vx.fillText(s,4,4+y*S.ch)}}
+function vzS(){
+ var W=VZ.w,H=VZ.h,k=.25+.75*(+$("vzi").value/100),T=VZ.T,S=VZ.st,h=VZ.seed;
+ if(!S.p){var r=vzRng(h);S.p=[0,1,2].map(function(){return{f:1.2+r()*4.5,ph:r()*6.28,a:.5+r()*.5,h2:2+Math.floor(r()*3),sp:.4+r()*.9}});S.pl=[0,1,2,3].map(function(){return{x:r(),w:.015+r()*.04,per:3000+r()*5000,sg:r()<.5?-1:1}});S.kh=1+(h%970)/10}
+ vzFill(RM?1:.22);vx.shadowBlur=0;vx.lineWidth=1;vx.strokeStyle=vzC(.12);vx.beginPath();
+ for(var gx=0;gx<=W;gx+=30){vx.moveTo(gx,0);vx.lineTo(gx,H)}for(var gy=0;gy<=H;gy+=30){vx.moveTo(0,gy);vx.lineTo(W,gy)}vx.stroke();
+ vx.lineWidth=2;vx.shadowColor=vzC(1);vx.shadowBlur=8;
+ S.p.forEach(function(p,i){vx.strokeStyle=vzC(.9-i*.2);vx.beginPath();var by=H*(.28+.22*i),A=H*.1*k*p.a;
+  for(var x=0;x<=W;x+=2){var u=x/W,v=Math.sin(u*p.f*6.283+T*p.sp*.004+p.ph)+.5*Math.sin(u*p.f*p.h2*6.283+T*.006)*(.4+.6*Math.sin(T*.0007+i));
+   S.pl.forEach(function(q){var d=(u-((q.x+T/q.per)%1))/q.w;v+=q.sg*2.2*Math.exp(-d*d)*(i===1?1:.5)});
+   v+=(vzN(x,i,Math.floor(T/40))-.5)*.3*k;var yy=by-v*A;x?vx.lineTo(x,yy):vx.moveTo(x,yy)}vx.stroke()});
+ vx.shadowBlur=3;vx.font="11px "+MF;vx.textBaseline="top";vx.fillStyle=vzC(.8);
+ vx.fillText("ЧАСТОТА "+(S.kh+Math.sin(T/900)*.37).toFixed(2)+" МГц   СИД "+h.toString(16).toUpperCase(),10,8);
+ vx.fillText((h%2?"СИГНАЛ: НЕУСТОЙЧИВ":"СИГНАЛ: СТАБИЛЕН")+"   АМПЛ "+(k*100).toFixed(0)+"%",10,H-20)}
+function vzD(){
+ var W=VZ.w,H=VZ.h,k=+$("vzi").value/100,T=VZ.T,S=VZ.st;
+ if(!S.c){var r=vzRng(VZ.seed),cw=W<420?12:14,n=Math.floor(W/cw);S.cw=cw;S.pool=Array.from(VZ.t.toUpperCase().replace(/\s+/g,"")).concat("01<>/|=+*#:".split(""));
+  S.c=[];for(var i=0;i<n;i++)S.c.push({y:-Math.floor(r()*30),a:0,sp:.25+r()*.6,on:r(),o:Math.floor(r()*S.pool.length)});S.lt=T;S.r=r}
+ var dt=Math.max(0,T-S.lt);S.lt=T;vzFill(RM?1:.16);vx.font=S.cw+"px "+MF;vx.textBaseline="top";vx.shadowColor=vzC(1);vx.shadowBlur=6;
+ S.c.forEach(function(c,i){if(c.on>.2+k*.8)return;c.a+=dt/16*c.sp*.35;
+  while(c.a>=1){c.a--;c.y++;var ch=S.pool[(c.o+c.y)%S.pool.length],hd=c.y*S.cw*1.1;
+   vx.fillStyle=vzC(.95);vx.fillText(ch,i*S.cw,hd);if(hd>H+S.r()*H)c.y=-Math.floor(S.r()*20)}})}
+
+function vzScene(){
+ var W=VZ.w,H=VZ.h,T=VZ.T,k=+$("vzi").value/100,txt=String(VZ.t||"").toLowerCase();
+ var C=VZ.pal?"#ffb347":"#76ff7a",dim=VZ.pal?"rgba(255,179,71,.25)":"rgba(118,255,122,.25)",soft=VZ.pal?"rgba(255,179,71,.65)":"rgba(118,255,122,.65)";
+ vzFill(1);vx.save();vx.lineJoin="round";vx.lineCap="round";
+ var rng=vzRng(VZ.seed);
+ for(var i=0;i<42;i++){var x=rng()*W,y=rng()*H*.62,tw=.35+.65*Math.sin(T*.003+i*2);vx.fillStyle=soft;vx.globalAlpha=.2+.65*Math.abs(tw)*k;vx.fillRect(x,y,tw>0?2:1,tw>0?2:1)}
+ vx.globalAlpha=1;
+ var city=/город|city|здан|дом|house|небоскр|улиц|street|москва|советск|ссср/.test(txt);
+ var space=/космос|космич|space|звезд|звёзд|галакт|планет|корабл|spaceship|ship|ufo|нло|ракет|rocket/.test(txt);
+ var moon=/лун|moon|ноч|night|космос|space|звезд|звёзд/.test(txt);
+ var mount=/гор[аы]|mountain|скал|холм/.test(txt),tree=/лес|дерев|forest|tree|парк/.test(txt);
+ var water=/море|океан|sea|ocean|река|river|озер|lake/.test(txt),rain=/дожд|rain|ливен/.test(txt),snow=/снег|snow|метел/.test(txt);
+ var house=/дом|house|коттедж|изб|хижин/.test(txt),person=/человек|человеч|man|woman|агент|agent|astronaut|космонавт/.test(txt);
+ var cat=/кот|кошка|cat/.test(txt),dog=/собак|пёс|пес|dog/.test(txt),skull=/череп|skull/.test(txt);
+ var horizon=H*.69;
+ vx.fillStyle="rgba(8,20,12,.95)";vx.fillRect(0,horizon,W,H-horizon);
+ if(mount||(!city&&!water)){vx.beginPath();vx.moveTo(0,horizon);for(var mx=0;mx<=W;mx+=W/8)vx.lineTo(mx,horizon-(mount?H*.16:H*.07)-Math.abs(Math.sin(mx*.027+VZ.seed%7))*H*.08);vx.lineTo(W,H);vx.lineTo(0,H);vx.closePath();vx.fillStyle="rgba(25,48,31,.8)";vx.fill();vx.strokeStyle=soft;vx.lineWidth=1.3;vx.stroke()}
+ if(moon||!/солнц|sun|день|day/.test(txt)){vx.beginPath();vx.arc(W*.79,H*.2,Math.min(W,H)*.075,0,Math.PI*2);vx.fillStyle=dim;vx.fill();vx.strokeStyle=C;vx.lineWidth=1.4;vx.stroke();vx.beginPath();vx.arc(W*.765,H*.18,Math.min(W,H)*.068,0,Math.PI*2);vx.fillStyle="#030905";vx.fill()}
+ else{vx.beginPath();vx.arc(W*.78,H*.22,Math.min(W,H)*.07,0,Math.PI*2);vx.fillStyle=dim;vx.fill();vx.strokeStyle=C;vx.stroke()}
+ if(water){vx.fillStyle="rgba(3,12,8,.9)";vx.fillRect(0,horizon+H*.05,W,H*.25);for(var wy=0;wy<8;wy++){var yy=horizon+H*.07+wy*H*.025;vx.strokeStyle=dim;vx.beginPath();for(var wx=0;wx<W;wx+=4){var py=yy+Math.sin(wx*.04+T*.006+wy)*2;wx?vx.lineTo(wx,py):vx.moveTo(wx,py)}vx.stroke()}}
+ if(city){var bw=Math.max(10,W/18);for(var bx=0;bx<W;bx+=bw+2){var bh=H*(.12+vzN(Math.floor(bx),2,0)*.27);vx.fillStyle="rgba(3,8,5,.98)";vx.fillRect(bx,horizon-bh,bw,bh);vx.strokeStyle=dim;vx.strokeRect(bx,horizon-bh,bw,bh);for(var wy2=horizon-bh+7;wy2<horizon-4;wy2+=9)for(var wx2=bx+4;wx2<bx+bw-2;wx2+=7){vx.fillStyle=vzN(Math.floor(wx2),Math.floor(wy2),Math.floor(T/700))>.47?soft:"rgba(0,0,0,.7)";vx.fillRect(wx2,wy2,2.5,3)}}}
+ if(house){var hx=W*.18,hy=horizon-H*.12;vx.fillStyle="rgba(3,8,5,.95)";vx.fillRect(hx,hy,W*.18,H*.12);vx.beginPath();vx.moveTo(hx-5,hy);vx.lineTo(hx+W*.09,hy-H*.1);vx.lineTo(hx+W*.185,hy);vx.closePath();vx.fill();vx.strokeStyle=C;vx.stroke();vx.fillStyle=soft;vx.fillRect(hx+W*.07,hy+H*.04,W*.035,H*.08)}
+ if(tree){for(var tr=0;tr<7;tr++){var tx=W*(.06+tr*.14),ty=horizon+H*.05;vx.strokeStyle=C;vx.lineWidth=2;vx.beginPath();vx.moveTo(tx,ty+H*.13);vx.lineTo(tx,ty);vx.stroke();vx.beginPath();vx.moveTo(tx-H*.035,ty+H*.035);vx.lineTo(tx,ty-H*.035);vx.lineTo(tx+H*.035,ty+H*.035);vx.closePath();vx.fillStyle="rgba(3,8,5,.95)";vx.fill();vx.strokeStyle=dim;vx.stroke()}}
+ if(space){var sx=W*(.42+.04*Math.sin(T*.001)),sy=H*(.36+.025*Math.sin(T*.002));vx.save();vx.translate(sx,sy);vx.fillStyle="rgba(3,8,5,.98)";vx.beginPath();vx.moveTo(-W*.12,0);vx.lineTo(-W*.025,-H*.045);vx.lineTo(W*.1,-H*.035);vx.lineTo(W*.14,0);vx.lineTo(W*.045,H*.035);vx.lineTo(-W*.07,H*.025);vx.closePath();vx.fill();vx.strokeStyle=C;vx.lineWidth=1.6;vx.stroke();vx.beginPath();vx.moveTo(-W*.02,H*.018);vx.lineTo(-W*.08,H*.07);vx.lineTo(W*.005,H*.04);vx.lineTo(W*.04,H*.03);vx.lineTo(W*.08,H*.07);vx.lineTo(W*.06,H*.018);vx.stroke();vx.strokeStyle=soft;vx.beginPath();vx.moveTo(-W*.13,0);vx.lineTo(-W*.2,Math.sin(T*.008)*2);vx.stroke();vx.restore()}
+ if(person||cat||dog||skull){var px=W*.5,py=horizon+H*.18,sc=Math.min(W,H)/220;vx.strokeStyle=C;vx.lineWidth=2;
+ if(skull){vx.beginPath();vx.arc(px,py-H*.05,Math.min(W,H)*.065,0,Math.PI*2);vx.stroke();vx.fillStyle=soft;vx.fillRect(px-9,py-H*.065,5,7);vx.fillRect(px+4,py-H*.065,5,7);vx.beginPath();vx.moveTo(px-10,py+2);vx.lineTo(px+10,py+2);vx.stroke()}
+ else if(cat||dog){vx.beginPath();vx.arc(px,py-H*.035,9*sc,0,Math.PI*2);vx.moveTo(px-7*sc,py-H*.04);vx.lineTo(px-12*sc,py-H*.14);vx.lineTo(px-1*sc,py-H*.08);vx.moveTo(px+7*sc,py-H*.04);vx.lineTo(px+12*sc,py-H*.14);vx.lineTo(px+1*sc,py-H*.08);vx.moveTo(px,py-2*sc);vx.lineTo(px,py+H*.08);vx.moveTo(px,py+H*.02);vx.lineTo(px-H*.07,py+H*.04);vx.moveTo(px,py+H*.02);vx.lineTo(px+H*.07,py+H*.04);vx.stroke()}
+ else{vx.beginPath();vx.arc(px,py-H*.1,7*sc,0,Math.PI*2);vx.moveTo(px,py-H*.09);vx.lineTo(px,py+H*.035);vx.moveTo(px,py-H*.03);vx.lineTo(px-H*.055,py+H*.015);vx.moveTo(px,py-H*.03);vx.lineTo(px+H*.055,py+H*.015);vx.moveTo(px,py+H*.035);vx.lineTo(px-H*.035,py+H*.11);vx.moveTo(px,py+H*.035);vx.lineTo(px+H*.035,py+H*.11);vx.stroke()}}
+ if(rain||snow){for(var ri=0;ri<45;ri++){var rx=vzN(ri,9,Math.floor(T/80))*W,ry=(vzN(ri,11,Math.floor(T/80))*H+T*.08)%H;vx.strokeStyle=soft;vx.beginPath();vx.moveTo(rx,ry);vx.lineTo(rx+(snow?1:3),ry+(snow?2:7));vx.stroke()}}
+ vx.fillStyle=soft;vx.font="10px "+MF;vx.fillText("СЦЕНА / "+(VZ.t||"БЕЗ НАЗВАНИЯ").toUpperCase().slice(0,42),8,8);vx.fillStyle=dim;vx.fillText("ПРОЦЕДУРНЫЙ РЕНДЕР · СИД "+VZ.seed.toString(16).toUpperCase(),8,H-14);vx.restore()
+}
+function vzDraw(){try{[vzA,vzB,vzS,vzD,vzScene][VZ.m]()}catch(e){VZ.pause=true;$("vzmsg").textContent="ОШИБКА ВИЗУАЛИЗАТОРА: "+String(e&&e.message||e).slice(0,60)}}
+function vzGo(){if(!VZ.raf&&VZ.run&&!VZ.pause&&!document.hidden){VZ.last=performance.now();VZ.raf=requestAnimationFrame(vzLoop)}}
+function vzLoop(ts){VZ.raf=0;if(!VZ.run||VZ.pause||document.hidden)return;var dt=Math.min(50,ts-VZ.last);VZ.last=ts;VZ.T+=dt*(+$("vzs").value/50)*(RM?.3:1);vzDraw();VZ.raf=requestAnimationFrame(vzLoop)}
+function vzStart(){VZ.run=true;vzSize();if(!VZ.init){VZ.init=1;vzGen()}else{vzDraw();vzGo()}}
+function vzStop(){VZ.run=false;if(VZ.raf){cancelAnimationFrame(VZ.raf);VZ.raf=0}}
+function vzGen(){var t=$("vzt").value.trim();VZ.t=(t||"ВРЕМЯ — ДРАГОЦЕННЫЙ РЕСУРС").slice(0,120);VZ.seed=vzHash(VZ.t);VZ.T=0;VZ.st={};VZ.pause=false;
+ $("vzp").textContent="⏸ Пауза";$("vzmsg").textContent=(t?"":"ПУСТОЙ ВВОД · ")+"СИД "+VZ.seed.toString(16).toUpperCase()+" · СИМВОЛОВ: "+Array.from(VZ.t).length;vzFill(1);vzDraw();vzGo()}
+$("vzg").onclick=vzGen;$("vzt").onkeydown=function(e){if(e.key==="Enter"){e.preventDefault();vzGen()}};
+$("vzm").onclick=function(e){var b=e.target.closest("button");if(!b)return;VZ.m=+b.dataset.m;Array.prototype.forEach.call($("vzm").children,function(x){x.className=x===b?"on":""});VZ.T=0;VZ.st={};VZ.pause=false;$("vzp").textContent="⏸ Пауза";vzFill(1);vzDraw();vzGo()};
+$("vzp").onclick=function(){if(!VZ.t)return vzGen();VZ.pause=!VZ.pause;this.textContent=VZ.pause?"▶ Пуск":"⏸ Пауза";vzGo()};
+$("vzx").onclick=function(){VZ.pause=true;VZ.t="";VZ.st={};$("vzt").value="";$("vzp").textContent="▶ Пуск";vzFill(1);vx.font="11px "+MF;vx.fillStyle=vzC(.5);vx.textBaseline="top";vx.fillText("ЭКРАН ОЧИЩЕН",10,10);$("vzmsg").textContent=""};
+$("vzk").onclick=function(){VZ.pal=1-VZ.pal;this.textContent="Цвет: "+(VZ.pal?"янтарный":"зелёный");if(VZ.pause&&VZ.t)vzDraw()};
+$("vzs").oninput=$("vzi").oninput=function(){if(VZ.pause&&VZ.t)vzDraw()};
+$("vb4").onclick=function(){setView(4)};
+document.addEventListener("visibilitychange",vzGo);
+if(window.ResizeObserver)new ResizeObserver(function(){if(VZ.run){vzSize();if(VZ.t)vzDraw()}}).observe(vzc.parentNode);else window.addEventListener("resize",function(){if(VZ.run){vzSize();if(VZ.t)vzDraw()}});
+
+/* power-on gate */
+var gs=$("gscr"),sleep=function(ms){return new Promise(function(r){setTimeout(r,ms)})},started=false;
+async function put(t,ms){var p=document.createElement("div");gs.appendChild(p);for(var i=0;i<t.length;i++){p.textContent=t.slice(0,i+1);if(i%2===0)S.key();await sleep(ms||20)}await sleep(180)}
+$("pwr").onclick=async function(){
+ if(started)return;started=true;initAudio();
+ /* Ask Telegram for fullscreen from this user gesture; gracefully fall back to expanded mode. */
+ if(tg){
+  try{
+   if(typeof tg.requestFullscreen==="function"){
+    var fsResult=tg.requestFullscreen();
+    if(fsResult&&typeof fsResult.catch==="function")fsResult.catch(function(){try{tg.expand()}catch(_){}});
+   }else{tg.expand();}
+  }catch(e){try{tg.expand()}catch(_){}}
+ }
+ $("pwr").style.display="none";await sleep(120);S.power();
+ gs.innerHTML="";gs.classList.remove("off");gs.classList.remove("boot");gs.offsetHeight;gs.classList.add("boot");
+ await sleep(700);
+ await put("БЮРО ВРЕМЕННЫХ ПРОГНОЗОВ · ТЕРМИНАЛ 77-B");
+ await put("ПРОВЕРКА ПАМЯТИ ........... OK");
+ await put("СИНХРОНИЗАЦИЯ ЛИНИИ ....... OK");
+ await put("КАНАЛ ПОГОДНЫХ ДАННЫХ .... ОЖИДАНИЕ");
+ await put("ТРЕБУЕТСЯ ИДЕНТИФИКАЦИЯ СОТРУДНИКА.");
+ var saved="";try{saved=localStorage.getItem("tva_agent")||""}catch(e){}
+ if(!saved&&tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user)saved=String(tg.initDataUnsafe.user.first_name||"").slice(0,24).toUpperCase();
+ $("gname").placeholder=saved||"ИМЯ";
+ $("gform").hidden=false;S.beep();$("gname").focus();
+ var busy=false;
+ async function enter(){
+  if(busy)return;
+  var name=($("gname").value.trim()||saved).slice(0,24).toUpperCase();
+  if(!name){S.err();$("gname").style.borderColor="#e03a2a";return}
+  busy=true;try{localStorage.setItem("tva_agent",name)}catch(e){}
+  $("gform").hidden=true;
+  await put("ПРОВЕРКА ЛИЧНОСТИ ........");await sleep(500);
+  await put("ДОСТУП РАЗРЕШЁН. ДОБРО ПОЖАЛОВАТЬ, АГЕНТ "+name+".");S.access();await sleep(900);
+  $("agent").textContent="АГЕНТ: "+name;greet="Добро пожаловать, агент "+name+"! Время — драгоценный ресурс.";
+  $("gate").classList.add("open");document.body.classList.remove("locked");
+  setTimeout(function(){$("gate").remove()},750);
+  begin();
+ }
+ $("gok").onclick=enter;
+ $("gname").onkeydown=function(e){if(e.key==="Enter"){e.preventDefault();enter()}};
+};
+</script>
+</body>
+</html>
